@@ -1,0 +1,486 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+	http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+	http://www.springframework.org/schema/context
+	http://www.springframework.org/schema/context/spring-context-3.0.xsd
+ 	http://www.springframework.org/schema/tx
+    http://www.springframework.org/schema/tx/spring-tx-3.0.xsd
+  	http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-3.0.xsd ">
+
+	<!-- telling container to take care of annotations stuff -->
+	<context:annotation-config />
+
+	<!-- for spring transaction -->
+	<tx:annotation-driven transaction-manager="txManager" />
+
+	<!-- declaring base package -->
+	<context:component-scan base-package="com.rolta.brlps.cbo" />
+
+	<bean id="placeholderConfigMM" class="com.rolta.brlps.cbo.util.ConfigurationSelector">
+		<property name="systemPropertiesModeName" value="SYSTEM_PROPERTIES_MODE_OVERRIDE" />
+		<property name="locations">
+			<list>
+				<value>classpath:config/configuration.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- declare datasource bean -->
+	<bean id="dataSource" class="${dataSource.className}">
+		<property name="driverClassName">
+			<value>${dataSource.driverClassName}</value>
+		</property>
+		<property name="url">
+			<value>${dataSource.url}</value>
+		</property>
+		<property name="username">
+			<value>${dataSource.username}</value>
+		</property>
+		<property name="password">
+			<value>${dataSource.password}</value>
+		</property>
+		
+		<property name="initialSize" value="${dataSource.initialSize}" />
+		<property name="maxActive" value="${dataSource.maxActive}" />
+		<property name="maxWait" value="${dataSource.maxWait}" />
+		<property name="minEvictableIdleTimeMillis" value="${dataSource.minEvictableIdleTimeMillis}" />
+		<property name="validationQuery" value="${dataSource.validationQuery}"></property>
+		<property name="testOnBorrow" value="${dataSource.testOnBorrow}"></property>
+		<property name="removeAbandoned" value="${dataSource.removeAbandoned}"></property>
+		<property name="removeAbandonedTimeout" value="${dataSource.removeAbandonedTimeout}"></property>
+		
+		
+	</bean>
+
+	<bean id="log4jInitialization"
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetClass" value="org.springframework.util.Log4jConfigurer" />
+		<property name="targetMethod" value="initLogging" />
+		<property name="arguments">
+			<list>
+				<value>classpath:cbologs/log4j_brlps.properties</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="viewResolver"
+		class="org.springframework.web.servlet.view.UrlBasedViewResolver">
+		<property name="viewClass">
+			<value>
+				org.springframework.web.servlet.view.tiles2.TilesView
+			</value>
+		</property>
+	</bean>
+
+	<!-- tile configurer -->
+	<bean id="tilesConfigurer"
+		class="org.springframework.web.servlet.view.tiles2.TilesConfigurer">
+		<property name="definitions">
+			<list>
+				<value>/WEB-INF/tiles.xml</value>
+			</list>
+		</property>
+	</bean>
+	<!-- Mapping to Jackson engine for producing the json message -->
+
+	<bean
+		class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+		<property name="mediaTypes">
+			<map>
+				<entry key="json" value="application/json" />
+				<entry key="xml" value="text/xml" />
+				<entry key="html" value="text/html;charset=UTF-8" />
+
+			</map>
+		</property>
+		<property name="defaultContentType" value="application/json" />
+		<property name="defaultViews">
+			<list>
+				<bean
+					class="org.springframework.web.servlet.view.json.MappingJacksonJsonView">
+					<property name="prefixJson" value="false" />
+					<property name="objectMapper" ref="jacksonObjectMapper" />
+				</bean>
+
+			</list>
+		</property>
+	</bean>
+
+	<bean
+		class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="messageConverters">
+			<list>
+				<bean
+					class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter">
+					<property name="objectMapper" ref="jacksonObjectMapper" />
+				</bean>
+			</list>
+		</property>
+	</bean>
+	<bean id="jacksonObjectMapper" class="org.codehaus.jackson.map.ObjectMapper" />
+
+	<bean id="jacksonSerializationConfig" class="org.codehaus.jackson.map.SerializationConfig"
+		factory-bean="jacksonObjectMapper" factory-method="getSerializationConfig" />
+
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="jacksonSerializationConfig" />
+		<property name="targetMethod" value="setSerializationInclusion" />
+		<property name="arguments">
+			<list>
+				<value type="org.codehaus.jackson.map.annotate.JsonSerialize.Inclusion">NON_NULL</value>
+			</list>
+		</property>
+	</bean>
+
+	<!-- Ensure that the method toString() is used instead of name() for enums -->
+	<!-- This allow us to customize the output when needed -->
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="jacksonSerializationConfig" />
+		<property name="targetMethod" value="enable" />
+		<property name="arguments">
+			<list>
+				<value type="org.codehaus.jackson.map.SerializationConfig.Feature">WRITE_ENUMS_USING_TO_STRING</value>
+			</list>
+		</property>
+	</bean>
+
+
+	<!-- ************************************** -->
+	<!-- Ensure that the method toString() of Date objects are used to avoid 
+		having the values as a Long -->
+	<!-- ************************************** -->
+	<bean
+		class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+		<property name="targetObject" ref="jacksonSerializationConfig" />
+		<property name="targetMethod" value="disable" />
+		<property name="arguments">
+			<list>
+				<value type="org.codehaus.jackson.map.SerializationConfig.Feature">WRITE_DATES_AS_TIMESTAMPS</value>
+			</list>
+		</property>
+	</bean>
+
+	<bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+	<!-- similarly, don't forget the PlatformTransactionManager -->
+	<bean id="txManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+
+	<!-- configuration for resource bundle -->
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basenames">
+			<list>
+				<value>classpath:store/materialReceiptVoucher</value>
+				<value>classpath:microplan/microplan</value>
+				<value>classpath:store/materialWithdrawalVoucher</value>
+				<value>classpath:store/materialStockRegister</value>
+				<value>classpath:accounts/voucherView</value>
+				<value>classpath:accounts/accountsConfig</value>
+				<value>classpath:header</value>
+				<value>classpath:footer</value>
+				<value>classpath:login/changePassword</value>
+				<value>classpath:rolesaccess/designationProfile</value>
+				<value>classpath:rolesaccess/userProfile</value>
+				<value>classpath:ib/CboMaster</value>
+				<value>classpath:ib/Member</value>
+				<value>classpath:commons/filter</value>
+				<value>classpath:bank/bank</value>
+				<value>classpath:ib/memberAdvanceDetails</value>
+				<value>classpath:ib/memberDesignationMapping</value>
+				<value>classpath:ib/cboMeetingDetails</value>
+				<value>classpath:cb/training</value>
+				<value>classpath:login/userCreation</value>
+				<value>classpath:ib/entitlementModule</value>
+				<value>classpath:hrf/hrfRequest</value>
+				<value>classpath:offfarm/dairy/cattleType</value>
+				<value>classpath:flsm/loanType</value>
+				<value>classpath:flsm/loanDisbursementFromCboToCboView</value>
+				<value>classpath:login/userprofile</value>
+				<value>classpath:fsf/fsfRequest</value>
+				<value>classpath:lenden/propatra</value>
+				<value>classpath:ib/ClusterMaster</value>
+				<value>classpath:ib/EmailNotification</value>
+				<value>classpath:ssy/Ssy</value>
+				<value>classpath:is/IS</value>
+				<value>classpath:pds/pds</value>
+				<value>classpath:mi/MicroinsuranceUpload</value>
+				<value>classpath:mi/miInitiationAndTrackingView</value>
+				<value>classpath:offfarm/dairy/cattle</value>
+				<value>classpath:farm/cultivation</value>
+				<value>classpath:nonfarm/nonFarm</value>
+				<value>classpath:offfarm/poultry/batchCreation</value>
+				<value>classpath:datautility/datautility</value>
+				<value>classpath:grievance/grievance</value>
+				
+			</list>
+		</property>
+		<property name="defaultEncoding" value="UTF-8" />
+	</bean>
+
+	<bean id="localeChangeInterceptor"
+		class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor">
+		<property name="paramName" value="lang" />
+	</bean>
+
+	<bean id="localeResolver"
+		class="org.springframework.web.servlet.i18n.SessionLocaleResolver">
+		<property name="defaultLocale" value="en" />
+	</bean>
+
+	<bean id="handlerMapping"
+		class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping">
+		<property name="interceptors">
+			<ref bean="localeChangeInterceptor" />
+		</property>
+	</bean>
+
+	<!-- configuration for resource bundle Ended here -->
+
+
+
+
+	<bean id="geographicSearch"
+		class="com.rolta.brlps.cbo.dao.uicomponent.GeographicSearchImpl">
+	</bean>
+
+	<!-- for Roles and access declare beans -->
+	<bean id="loginDAO" class="com.rolta.brlps.cbo.dao.login.LoginDAOImpl" />
+	<bean id="loginService" class="com.rolta.brlps.cbo.services.login.LoginServiceImpl" />
+	<bean id="loginBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.login.LoginBusinessDelegateImpl" />
+
+	<!-- declare beans -->
+	<bean id="storeDAO" class="com.rolta.brlps.cbo.dao.store.StoreDAOImpl" />
+	<bean id="storeService" class="com.rolta.brlps.cbo.services.store.StoreServiceImpl" />
+	<bean id="storeBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.store.StoreBusinessDelegateImpl" />
+
+	<!-- Micro Insurance Beans -->
+	<bean id="microInsuranceDAO" class="com.rolta.brlps.cbo.dao.mi.MIDAOImpl" />
+	<bean id="microInsuranceService" class="com.rolta.brlps.cbo.services.mi.MIServiceImpl" />
+	<bean id="microInsuranceDelegate" class="com.rolta.brlps.cbo.delegate.mi.MIBusinessDelegateImpl" />
+	<!-- Micro Insurance Beans End -->
+	<!-- declare beans for IB -->
+	<bean id="ibDAO" class="com.rolta.brlps.cbo.dao.ib.IBDAOImpl" />
+	<bean id="ibService" class="com.rolta.brlps.cbo.services.ib.IBServiceImpl" />
+	<bean id="ibBusinessDelegate" class="com.rolta.brlps.cbo.delegate.ib.IBBusinessDelegateImpl" />
+
+	<bean id="poultryDAO" class="com.rolta.brlps.cbo.dao.offfarm.poultry.PoultryDAOImpl" />
+	<bean id="poultryService"
+		class="com.rolta.brlps.cbo.services.offfarm.poultry.PoultryServiceImpl" />
+	<bean id="poultryBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.offfarm.poultry.PoultryBusinessDelegateImpl"></bean>
+	<!-- Poultry Beans End -->
+
+	<!-- declare beans for Accounts -->
+	<bean id="accountsDAO" class="com.rolta.brlps.cbo.dao.accounts.AccountsDAOImpl" />
+	<bean id="accountsService"
+		class="com.rolta.brlps.cbo.services.accounts.AccountsServiceImpl" />
+	<bean id="accountsBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.accounts.AccountsBusinessDelegateImpl" />
+
+	<!-- declare beans for cattle_type module -->
+	<bean id="dairyDAO" class="com.rolta.brlps.cbo.dao.offfarm.dairy.DairyDAOImpl" />
+	<bean id="dairyService"
+		class="com.rolta.brlps.cbo.services.offfarm.dairy.DairyServiceImpl" />
+	<bean id="dairyBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.offfarm.dairy.DairyBusinessDelegateImpl" />
+
+	<!-- declare beans for offFarm module -->
+	<bean id="offFarmService" class="com.rolta.brlps.cbo.services.offfarm.OffFarmServiceImpl"></bean>
+	<bean id="offFarmDAO" class="com.rolta.brlps.cbo.dao.offfarm.OffFarmDAOImpl"></bean>
+	<bean id="offFarmBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.offfarm.OffFarmBusinessDelegateImpl" />
+
+	<!-- declare beans for loan_type module -->
+	<bean id="flsmService" class="com.rolta.brlps.cbo.services.flsm.FLSMServiceImpl"></bean>
+	<bean id="flsmDAO" class="com.rolta.brlps.cbo.dao.flsm.FLSMDAOImpl"></bean>
+	<bean id="flsmBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.flsm.FLSMBusinessDelegateImpl" />
+
+
+	<!-- for populating drop down declare beans -->
+	<bean id="uiComponentDAO" class="com.rolta.brlps.cbo.dao.uicomponent.UIComponentDAOImpl" />
+	<bean id="uiComponenteService"
+		class="com.rolta.brlps.cbo.services.uicomponent.UIComponentServiceImpl" />
+	<bean id="uiComponentBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.uicomponent.UIComponentBusinessDelegateImpl" />
+
+	<!-- cb beans -->
+	<bean id="cbDao" class="com.rolta.brlps.cbo.dao.cb.CBDAOImpl" />
+	<bean id="cbService" class="com.rolta.brlps.cbo.services.cb.CBServiceImpl" />
+	<bean id="cbBusinessDelegate" class="com.rolta.brlps.cbo.delegate.cb.CBBusinessDelegateImpl" />
+	<!-- Goatery Beans -->
+	
+	<bean id="goateryDAO" class="com.rolta.brlps.cbo.dao.offfarm.goatery.GoateryDAOImpl" />
+	<bean id="goateryService"
+		class="com.rolta.brlps.cbo.services.offfarm.goatery.GoateryServiceImpl" />
+	<bean id="goateryBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.offfarm.goatery.GoateryBusinessDelegateImpl" />
+	<!-- Goatery Beans End -->
+
+	<!-- for Roles and access declare beans -->
+	<bean id="rolesAccessDAO" class="com.rolta.brlps.cbo.dao.rolesaccess.RolesAccessDAOImpl" />
+	<bean id="rolesAccessService"
+		class="com.rolta.brlps.cbo.services.rolesaccess.RolesAccessServiceImpl" />
+	<bean id="rolesAccessBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.rolesaccess.RolesAccessBusinessDelegateImpl" />
+
+	<!-- FSF Autowired beans for injecting -->
+	<bean id="fsfDAO" class="com.rolta.brlps.cbo.dao.fsf.FSFDAOImpl" />
+	<bean id="fsfService" class="com.rolta.brlps.cbo.services.fsf.FSFServiceImpl" />
+	<bean id="fsfBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.fsf.FSFBusinessDelegateImpl" />
+
+
+	<bean id="PDSDAO" class="com.rolta.brlps.cbo.dao.pds.PDSDAOImpl" />
+	<bean id="PDSService" class="com.rolta.brlps.cbo.services.pds.PDSServiceImpl" />
+	<bean id="PDSBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.pds.PDSBusinessDelegateImpl" />
+
+
+	<!-- For Bank module -->
+	<bean id="bankDAO" class="com.rolta.brlps.cbo.dao.bank.BankDAOImpl" />
+	<bean id="bankService" class="com.rolta.brlps.cbo.services.bank.BankServiceImpl" />
+	<bean id="bankBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.bank.BankBusinessDelegateImpl" />
+
+
+	<!-- For Farm Module -->
+	<bean id="farmDAO" class="com.rolta.brlps.cbo.dao.farm.FarmDAOImpl" />
+	<bean id="farmService" class="com.rolta.brlps.cbo.services.farm.FarmServiceImpl" />
+	<bean id="farmBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.farm.FarmBusinessDelegateImpl" />
+
+
+	<bean id=" microplanDAO" class="com.rolta.brlps.cbo.dao.microplan.MicroplanDAOImpl" />
+	<bean id="microplanService"
+		class="com.rolta.brlps.cbo.services.microplan.MicroplanServiceImpl" />
+	<bean id="microplanBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.microplan.MicroplanBusinessDelegateImpl" />
+
+	<!-- LENDEN PROPATRA -->
+	<bean id="lenDenDAO" class="com.rolta.brlps.cbo.dao.lenden.LenDenDAOImpl" />
+	<bean id="lenDenService" class="com.rolta.brlps.cbo.services.lenden.LenDenServiceImpl" />
+	<bean id="lenDenBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.lenden.LenDenBusinessDelegateImpl" />
+
+
+	<bean id="hrfService" class="com.rolta.brlps.cbo.services.hrf.HRFServiceImpl"></bean>
+	<bean id="hrfDAO" class="com.rolta.brlps.cbo.dao.hrf.HRFDAOImpl"></bean>
+	<bean id="hrfBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.hrf.HRFBusinessDelegateImpl" />
+
+	<bean id="ssyDAO" class="com.rolta.brlps.cbo.dao.ssy.SSYDAOImpl" />
+	<bean id="ssyService" class="com.rolta.brlps.cbo.services.ssy.SSYServiceImpl" />
+	<bean id="ssyBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.ssy.SSYBusinessDelegateImpl" />
+		
+		
+	<bean id="isDAO" class="com.rolta.brlps.cbo.dao.is.ISDAOImpl" />
+	<bean id="isService" class="com.rolta.brlps.cbo.services.is.ISServiceImpl" />
+	<bean id="isBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.is.ISBusinessDelegateImpl" />
+		
+	<bean id="dataUtilityDAO" class="com.rolta.brlps.cbo.dao.datautility.DataUtilityDAOImpl" />
+	<bean id="dataUtilityService" class="com.rolta.brlps.cbo.services.datautility.DataUtilityServiceImpl" />
+	<bean id="dataUtilityBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.datautility.DataUtilityBusinessDelegateImpl" />	
+	
+	<bean id="grievanceDAO" class="com.rolta.brlps.cbo.dao.grievance.GrievanceDAOImpl" />
+	<bean id="grievanceService" class="com.rolta.brlps.cbo.services.grievance.GrievanceServiceImpl" />
+	<bean id="grievanceBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.grievance.GrievanceBusinessDelegateImpl" />
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<!-- one of the properties available; the maximum file size in bytes -->
+		<property name="maxUploadSize" value="10000000" />
+	</bean>
+
+	<!-- For NonFarm -->
+
+	<bean id=" nonfarmDAO" class="com.rolta.brlps.cbo.dao.nonfarm.NonFarmDAOImpl" />
+	<bean id="nonfarmService" class="com.rolta.brlps.cbo.services.nonfarm.NonFarmServiceImpl" />
+	<bean id="nonfarmBusinessDelegate"
+		class="com.rolta.brlps.cbo.delegate.nonfarm.NonFarmBusinessDelegateImpl" />
+
+	<!-- Quartz Job -->
+	<bean name="DBJob" class="org.springframework.scheduling.quartz.JobDetailBean">
+		<property name="jobClass" value="com.rolta.brlps.cbo.schedular.DatabaseJob" />
+		<property name="jobDataAsMap">
+			<map>
+				<entry key="jdbcTemplate" value-ref="jdbcTemplate" />
+			</map>
+		</property>
+	</bean>
+	<bean name="mailJob" class="org.springframework.scheduling.quartz.JobDetailBean">
+		<property name="jobClass" value="com.rolta.brlps.cbo.schedular.MailJob" />
+		<property name="jobDataAsMap">
+			<map>
+				<entry key="jdbcTemplate" value-ref="jdbcTemplate" />
+			</map>
+		</property>
+	</bean>
+	
+	<bean name="forwardGrievanceJob" class="org.springframework.scheduling.quartz.JobDetailBean">
+		<property name="jobClass" value="com.rolta.brlps.cbo.schedular.GrievanceAutoForwardJob"/>
+		<property name="jobDataAsMap">
+			<map>
+				<entry key="grievanceService" value-ref="grievanceService" />
+			</map>
+		</property>
+	</bean>
+	
+	<bean name="bankLinkageDAO" class="com.rolta.brlps.cbo.dao.banklinkage.BankLinkageDAOImpl"/>
+	<bean name="bankLinkageService" class="com.rolta.brlps.cbo.services.banklinkage.BankLinkageServiceImpl"/>
+	<bean name="bankLinkageDelegate" class="com.rolta.brlps.cbo.delegate.banklinkage.BankLinkageDelegateImpl"/>
+<!-- 
+	<bean id="triggerForwardJob" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="forwardGrievanceJob" />
+		<property name="cronExpression" value="0 0/10 07 * * ?" />
+	</bean>
+
+  	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+				<ref bean="triggerForwardJob" />
+			</list>
+		</property>
+	</bean>   
+	 -->
+	<!-- Cron Trigger -->
+<!-- 	<bean id="triggerDBJob" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="DBJob" />
+		<property name="cronExpression" value="0 40 16 * * ?" />
+	</bean>
+	<bean id="triggerMailJob" class="org.springframework.scheduling.quartz.CronTriggerBean">
+		<property name="jobDetail" ref="mailJob" />
+		<property name="cronExpression" value="0 00 17 * * ?" />
+	</bean>
+
+
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+				<ref bean="triggerDBJob" />
+				<ref bean="triggerMailJob" />
+			</list>
+		</property>
+	</bean> -->
+	
+
+</beans>
