@@ -1,0 +1,48 @@
+#oracle Database configuration
+dataSource.driverClassName = oracle.jdbc.OracleDriver
+dataSource.className = org.apache.commons.dbcp.BasicDataSource
+
+###### UAT server ################
+#appPath = /u01/liferay-portal-6.1.2-ce-ga3/tomcat-7.0.40/webapps/
+#dataSource.url = jdbc:oracle:thin:@172.16.90.19:1521:cbo
+#dataSource.username = cbo_testing
+#dataSource.password = cbo_testing
+
+
+
+
+
+####### Production server Test ################
+appPath = /home/roltaadmin/cbo_mis/apache-tomcat-7.0.52/webapps/
+dataSource.url = jdbc:oracle:thin:@172.17.122.162:1521:cbo
+dataSource.username = test_cbo
+dataSource.password = test_cbo_rolta
+
+########## New Production server ################
+#appPath = /home/roltaadmin/cbo_mis/apache-tomcat-7.0.52/webapps/
+#dataSource.url = jdbc:oracle:thin:@172.17.122.162:1521:cbo
+#dataSource.username = brlps_cbo_mis
+#dataSource.password = brlps_r0lta_cbo
+
+#dataSource.password = brlps_r0lta_o4@#le!!$
+
+dataSource.initialSize = 10
+dataSource.maxActive= 500
+dataSource.maxWait = 1000
+dataSource.minEvictableIdleTimeMillis = 500
+dataSource.validationQuery = select 1 from dual
+dataSource.testOnBorrow = true
+dataSource.removeAbandoned = true
+dataSource.removeAbandonedTimeout = 30
+
+
+
+#mail server configuration
+mail.smtp.auth = true
+#mail.smtp.auth = false
+mail.smtp.starttls = true
+#mail.emailServer = rmail.rolta.com
+mail.emailServer = nmail.brlp.in
+mail.smtpPort = 25
+mail.emailId = grievance_test@brlp.in
+mail.password = brl123
