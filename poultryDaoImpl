@@ -1,0 +1,1685 @@
+/**
+ * 
+ */
+package com.rolta.brlps.cbo.dao.offfarm.poultry;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+
+import com.rolta.brlps.cbo.domain.commons.JqFormData;
+import com.rolta.brlps.cbo.domain.offfarm.ShelterUnitType;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.BatchCreation;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.BatchNumber;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.GoateryMember;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.GoateryProduction;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.HouseholdBatch;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.MotherUnit;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.PoultryMember;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.PoultryProduction;
+import com.rolta.brlps.cbo.domain.offfarm.poultry.ShelterUnitMoniter;
+import com.rolta.brlps.cbo.helper.offfarm.ShelterUnitTypeRowMapper;
+import com.rolta.brlps.cbo.helper.offfarm.poultry.MotherUnitRowMapper;
+import com.rolta.brlps.cbo.helper.offfarm.poultry.ShelterUnitMonitorRowMapper;
+import com.rolta.brlps.cbo.util.GridUtils;
+import com.rolta.brlps.cbo.util.StandardVariables;
+import com.sun.corba.se.impl.encoding.CodeSetConversion.BTCConverter;
+
+/**
+ * @author geetanjali.jagde
+ *
+ */
+
+
+public class PoultryDAOImpl implements PoultryDAO
+{
+
+	@Autowired
+	JdbcTemplate jdbcTemplate;
+	
+	@Override
+	public List<MotherUnit> getShelterUnitList(JqFormData jqFormData)throws Exception {
+		
+		try 
+		{
+			int numberOfRecords = getShelterUnitListCount(jqFormData);
+			jqFormData.setTotalRecords(numberOfRecords);
+	
+			StringBuilder sql = new StringBuilder("select * from (select rownum rn,a.* from( select s.shelter_unit_id as shelterUnitId, t.DESCRIPTION as shelterUnitTypeName," +
+				" t.DESCRIPTION_HINDI as shelterUnitTypeNameHindi ,s.shelter_unit_name as shelterName, s.shelter_unit_name_hindi as shelterNameHindi, p.partner_name as partnerName, " +
+				" p.partner_name_hindi as partnerNameHindi ,s.fomation_date as formationDate, s.area_under_unit as areaUnderUnit, s.WATER_AVAILABILITY as waterAvailability, " +
+				" s.name AS contactPerson, s.phone_number AS contactNumeber,s.address AS address,"+
+				" po.ELECTRICITY_AVAILABILITY as electricity, po.BROODING_EQUIP_AVAILABILITY as brooding, po.FEDRER_AVAILABILITY as federer, " +
+				" s.record_status as recordStatus from m_shelter_unit s left join m_partner p on s.partner_id = p.partner_id "+
+				" left join m_shelter_unit_type t on s.shelter_unit_type_id = t.shelter_unit_type_id right join m_shelter_unit_poultry po" +
+				" on s.shelter_unit_id = po.shelter_unit_id ");
+			GridUtils.buildQuery(sql, jqFormData);
+			//jdbcTemplate = new JdbcTemplate(dataSource);
+			List<MotherUnit> shelterUnitList = jdbcTemplate.query(sql.toString(), new MotherUnitRowMapper());
+			return shelterUnitList;
+		} catch (Exception e) {
+			throw new Exception(e.toString());
+		}
+	}
+
+	@Override
+	public int getShelterUnitListCount(JqFormData jqFormData) {
+		final StringBuilder sql = new StringBuilder(
+				  "Select count(*) from "
+				+ "m_shelter_unit s left join m_partner p on s.partner_id = p.partner_id "
+				+ " left join m_shelter_unit_type t on s.shelter_unit_type_id = t.shelter_unit_type_id right join m_shelter_unit_poultry po"
+				+ " on s.shelter_unit_id = po.shelter_unit_id ");
+				
+		GridUtils.buildSearchQuery(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+	
+	@Override
+	public int saveShelterUnit(final MotherUnit motherUnit, final long loginMemberId) throws RuntimeException
+	{
+		try 
+		{
+			String query = "select count(*) from m_shelter_unit where partner_id="+motherUnit.getPartnerName()+" " +
+					"and (shelter_unit_name='"+motherUnit.getShelterName()+"' " +
+					"or shelter_unit_name_hindi='"+motherUnit.getShelterNameHindi()+"')";
+			int count = jdbcTemplate.queryForObject(query, Integer.class);
+			
+			if(count == 0){
+				String sqlShelterType = "select shelter_unit_type_id from m_shelter_unit_type where lower(UNIT_TYPE_SHORT_NAME)  like lower('%MU%') ";
+				final long shelterUnitTypeId = jdbcTemplate.queryForObject(sqlShelterType, Long.class);
+				
+				KeyHolder keyHolder = new GeneratedKeyHolder();
+				jdbcTemplate.update(new PreparedStatementCreator() {
+	
+					StringBuilder queryBuilder = new StringBuilder("insert into m_shelter_unit (shelter_unit_name, shelter_unit_name_hindi, " +
+					        "name,address,phone_number,"+
+							"area_under_unit,fomation_date, partner_id, shelter_unit_type_id, WATER_AVAILABILITY, record_status, CREATED_BY, CREATED_ON)"+ 
+							"values(?,?,?,?,?,?, to_date(?, 'dd-mm-yyyy'), ?, ?, ?, ?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+					
+					@Override
+					public PreparedStatement createPreparedStatement(Connection connection)throws SQLException
+					{
+						PreparedStatement ps = connection.prepareStatement(queryBuilder.toString(),
+								new String[] { "shelter_unit_ID" });
+						ps.setString(1, motherUnit.getShelterName());
+						ps.setString(2, motherUnit.getShelterNameHindi());
+						
+						ps.setString(3, motherUnit.getContactPerson());
+						ps.setString(4, motherUnit.getContactAddress());
+						ps.setString(5, motherUnit.getContactNumber());
+						ps.setInt(6, motherUnit.getAreaUnderUnit());
+						ps.setString(7, motherUnit.getFormationDate());
+						ps.setString(8, motherUnit.getPartnerName());
+						ps.setLong(9, shelterUnitTypeId);
+						ps.setInt(10, Integer.parseInt(motherUnit.getWaterAvailability()));
+						ps.setInt(11, Integer.parseInt(motherUnit.getRecordStatus()));
+						ps.setLong(12, loginMemberId);
+						return ps;
+					}
+	 			}, keyHolder);
+				
+				long shelterunitPK = keyHolder.getKey().longValue();
+	
+				String query2 = "insert into m_shelter_unit_poultry (SHELTER_UNIT_ID, ELECTRICITY_AVAILABILITY,BROODING_EQUIP_AVAILABILITY, WATERER_AVAILABILITY," +
+						"FEDRER_AVAILABILITY, record_status, CREATED_BY, CREATED_ON ) values (?,?,?,?,?,?, ?, TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))";
+				
+				jdbcTemplate.update(query2, new Object[]{shelterunitPK, motherUnit.getElectricityAvailability(), motherUnit.getBroodingEquipmentAvailability(),
+							motherUnit.getWaterAvailability(), motherUnit.getFedrerAvailability(), motherUnit.getRecordStatus(),loginMemberId});
+				
+				return StandardVariables.SUCCESSFULL;
+			}
+			else
+				return StandardVariables.UNIQUECONSTRAIN;
+		}
+		catch(RuntimeException re)
+		{
+			re.printStackTrace();
+			throw re;
+		}
+		catch (Exception e){
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public int updateShelterUnit(MotherUnit motherUnit, long loginMemberId)throws RuntimeException 
+	{
+		String query = "select count(*) from m_shelter_unit where partner_id="+motherUnit.getPartnerName()+" " +
+				"and (shelter_unit_name='"+motherUnit.getShelterName()+"' " +
+				"or shelter_unit_name_hindi='"+motherUnit.getShelterNameHindi()+"') " +
+				"and shelter_unit_id!="+motherUnit.getShelterUnitId();
+		
+		int count = jdbcTemplate.queryForObject(query, Integer.class);
+		if(count == 0)
+		{
+			String sqlShelterType = "select shelter_unit_type_id from m_shelter_unit_type where lower(UNIT_TYPE_SHORT_NAME)  like lower('%MU%') ";
+			final long shelterUnitTypeId = jdbcTemplate.queryForObject(sqlShelterType, Long.class);
+			
+			StringBuilder queryBuilder = new StringBuilder("update m_shelter_unit set shelter_unit_name=?,  shelter_unit_name_hindi=?," +
+					 "name=?,address=?,phone_number=?,"+
+					" area_under_unit=?, fomation_date=?, partner_id=?, shelter_unit_type_id=?,record_status=?, " );
+			queryBuilder.append("UPDATED_BY =?, UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where shelter_unit_id=?");
+			
+			String query2 = "update m_shelter_unit_poultry set BROODING_EQUIP_AVAILABILITY=?, WATERER_AVAILABILITY=?," +
+					"FEDRER_AVAILABILITY=?, ELECTRICITY_AVAILABILITY=?, record_status=?, " +
+					"UPDATED_BY =?, UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where SHELTER_UNIT_ID=?";
+			try
+			{
+				String dateReceiveStr;
+				java.util.Date formationDate =null;
+				
+				if(motherUnit.getFormationDate() != null){
+				     dateReceiveStr = motherUnit.getFormationDate();
+				    DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+				    formationDate = formatter.parse(dateReceiveStr);
+				}
+				
+				jdbcTemplate.update(queryBuilder.toString(),
+						new Object[] {motherUnit.getShelterName(), motherUnit.getShelterNameHindi(),
+					                    motherUnit.getContactPerson(),motherUnit.getContactAddress(),motherUnit.getContactNumber(),
+					                    motherUnit.getAreaUnderUnit(), formationDate, motherUnit.getPartnerName(), shelterUnitTypeId,
+										motherUnit.getRecordStatus(),loginMemberId, motherUnit.getShelterUnitId()});
+				
+				jdbcTemplate.update(query2, new Object[]{motherUnit.getBroodingEquipmentAvailability(), motherUnit.getWaterAvailability(), 
+						motherUnit.getFedrerAvailability(),motherUnit.getElectricityAvailability(), 
+						motherUnit.getRecordStatus(),loginMemberId, motherUnit.getShelterUnitId()});
+				return StandardVariables.SUCCESSFULL;
+			}
+			catch(RuntimeException re)
+			{throw re;}
+			catch (Exception e) 
+			{
+				e.printStackTrace();
+				return StandardVariables.EXCEPTION;
+			}
+		}
+		else
+			return StandardVariables.UNIQUECONSTRAIN;
+	}
+	
+	@Override
+	public List<ShelterUnitType> getShelterUnitTypeList(JqFormData jqFormData)
+			throws Exception {
+		try {
+			StringBuilder sql = new StringBuilder("select shelter_unit_type_id,unit_type_short_name, unit_type_sh_name_hindi, description, " +
+													"description_hindi, record_status from m_shelter_unit_type ");
+			//GridUtils.buildSearchQuery(sql, jqFormData);
+			//JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+			//jdbcTemplate.
+			List<ShelterUnitType> shelterUnitTypeList = jdbcTemplate.query(sql.toString(), new ShelterUnitTypeRowMapper());
+			return shelterUnitTypeList;
+		} catch (Exception e) {
+			throw new Exception();
+		}
+		//return null;
+	}
+	
+	public List<BatchCreation> getPoultryBatchCreationDetails(JqFormData jqFormData,String lang,long cboId)
+			throws Exception {
+		try {
+			
+			int numberOfRecords = getPoultryBatchCreationCount(jqFormData, cboId);
+			jqFormData.setTotalRecords(numberOfRecords);
+	
+			List<BatchCreation> batchList = new ArrayList<BatchCreation>();
+			StringBuilder sql = new StringBuilder();
+			if ("en".equalsIgnoreCase(lang)) {
+				
+			sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ "select a.SHELTER_UNIT_BATCH_ID ,a.BATCH_NAME,a.SUPPLIER_NAME, b.SHELTER_UNIT_NAME, a.QUANTITY_RECEIVED,c.MATERIAL_NAME ");
+			sql.append(" ,a.RECEIVING_DATE from t_shelter_unit_livestock_batch a left join m_material c on a.material_id = c.material_id  ");
+			sql.append(" left join m_shelter_unit  b on a.shelter_unit_id = b.shelter_unit_id  ");
+			sql.append(" left join mp_cbo_partner f on b.PARTNER_ID = f.PARTNER_ID  ");
+			sql.append(" left join m_shelter_unit_type  d on b.shelter_unit_type_id =d.shelter_unit_type_id ");
+			sql.append(" where lower(d.description)  like lower('%mother%') ");
+			sql.append(" and lower(c.MATERIAL_NAME) like lower('%Chick%') ");
+			sql.append(" and f.cbo_id = "+cboId + " ");
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			batchList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<BatchCreation>() {
+						@Override
+						public BatchCreation mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							BatchCreation batchCreation = new BatchCreation();
+							batchCreation.setShelterUnitBatchId(resultSet.getLong("SHELTER_UNIT_BATCH_ID"));
+
+							batchCreation.setBatchName(resultSet.getString("BATCH_NAME"));
+							if(resultSet.getString("SUPPLIER_NAME") != null)
+							{
+								batchCreation.setSupplierName(resultSet.getString("SUPPLIER_NAME"));
+							}
+							
+							batchCreation.setQuantityReceived(resultSet.getDouble("QUANTITY_RECEIVED"));
+							batchCreation.setShelterUnitName(resultSet.getString("SHELTER_UNIT_NAME"));
+							
+							batchCreation.setMaterialName(resultSet.getString("MATERIAL_NAME"));
+							
+							batchCreation.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+							return batchCreation;
+						}
+					});
+			}
+			else
+			{
+				 sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+						+ "select a.SHELTER_UNIT_BATCH_ID ,a.BATCH_NAME,a.SUPPLIER_NAME, b.SHELTER_UNIT_NAME_HINDI, a.QUANTITY_RECEIVED,c.MATERIAL_NAME_HINDI ");
+				sql.append(" ,a.RECEIVING_DATE from t_shelter_unit_livestock_batch a left join m_material c on a.material_id = c.material_id  ");
+				sql.append(" left join m_shelter_unit  b on a.shelter_unit_id = b.shelter_unit_id  ");
+				sql.append(" left join mp_cbo_partner f on b.PARTNER_ID = f.PARTNER_ID  ");
+				sql.append(" left join m_shelter_unit_type  d on b.shelter_unit_type_id =d.shelter_unit_type_id ");
+				sql.append(" where lower(d.description)  like lower('%mother%') ");
+				sql.append(" and lower(c.MATERIAL_NAME) like lower('%Chick%') ");
+				sql.append(" and f.cbo_id = "+cboId + " ");
+				
+				GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+				batchList = jdbcTemplate.query(sql.toString(),
+						new RowMapper<BatchCreation>() {
+							@Override
+							public BatchCreation mapRow(ResultSet resultSet,
+									int rownumber) throws SQLException {
+								BatchCreation batchCreation = new BatchCreation();
+								batchCreation.setShelterUnitBatchId(resultSet.getLong("SHELTER_UNIT_BATCH_ID"));
+
+								batchCreation.setBatchName(resultSet.getString("BATCH_NAME"));
+								if(resultSet.getString("SUPPLIER_NAME") != null)
+								{
+									batchCreation.setSupplierName(resultSet.getString("SUPPLIER_NAME"));
+								}
+								
+								batchCreation.setQuantityReceived(resultSet.getDouble("QUANTITY_RECEIVED"));
+								batchCreation.setShelterUnitName(resultSet.getString("SHELTER_UNIT_NAME_HINDI"));
+								
+								batchCreation.setMaterialName(resultSet.getString("MATERIAL_NAME_HINDI"));
+								
+								batchCreation.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+								return batchCreation;
+							}
+						});
+			}
+			
+			return batchList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception();
+		}
+	}
+	
+	@Override
+	public int getPoultryBatchCreationCount(JqFormData jqFormData, long cboId) {
+		final StringBuilder sql = new StringBuilder(
+				  "Select count(*) from "
+				+ "t_shelter_unit_livestock_batch a left join m_material c on a.material_id = c.material_id  "
+				+ " left join m_shelter_unit  b on a.shelter_unit_id = b.shelter_unit_id  "
+				+ " left join mp_cbo_partner f on b.PARTNER_ID = f.PARTNER_ID  "
+				+ " left join m_shelter_unit_type  d on b.shelter_unit_type_id =d.shelter_unit_type_id "
+				+ " where lower(d.description)  like lower('%mother%') "
+				+ " and lower(c.MATERIAL_NAME) like lower('%Chick%') "
+				+ " and f.cbo_id = "+cboId + " ");
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+	
+	public List<ShelterUnitMoniter> getPoultryMonitoringList(JqFormData jqFormData,
+			long shelterUnitBatchId) throws Exception {
+		try {
+			
+			int numberOfRecords = getPoultryMonitoringListCount(jqFormData, shelterUnitBatchId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<ShelterUnitMoniter> shelterUnitMoniterList = new ArrayList<ShelterUnitMoniter>();
+			StringBuilder sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ "select b.id, b.AVG_FEED_PER_DAY, b.LIVESTOCK_AVG_WT ,b.NUMBER_OF_MORTALITY, b.LIVESTOCK_AVG_TEMP ");
+			sql.append(" ,b.DEWORMING_DATE, b.INSPECTION_DATE ,b.VACCINATION_NAME ,b.VACCINATION_DATE ,b.DISEASE_NAME ");
+			sql.append(" ,b.TREATMENT_GIVEN,b.DISTRIBUTION_DATE,b.AVG_WT_DISTRIBUTION,b.NO_OF_CHICKS_DISTRIBUTED,b.TOTAL_EXPENDITURE from t_shelter_unit b left outer join t_shelter_unit_livestock_batch a ");
+			sql.append(" on b.SHELTER_UNIT_BATCH_ID = a.SHELTER_UNIT_BATCH_ID where a.SHELTER_UNIT_BATCH_ID = "+shelterUnitBatchId+" ");
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			shelterUnitMoniterList = jdbcTemplate.query(sql.toString(),
+					new ShelterUnitMonitorRowMapper());
+			return shelterUnitMoniterList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e.toString());
+		}
+	}
+
+	@Override
+	public int getPoultryMonitoringListCount(JqFormData jqFormData,
+			long shelterUnitBatchId) {
+		final StringBuilder sql = new StringBuilder(
+				  "Select count(*) from "
+				+ "t_shelter_unit b left outer join t_shelter_unit_livestock_batch a "
+				+ " on b.SHELTER_UNIT_BATCH_ID = a.SHELTER_UNIT_BATCH_ID where a.SHELTER_UNIT_BATCH_ID = "+shelterUnitBatchId+" ");
+				
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+	
+	@Override
+	public int savePoultryBatchCreationDetails(BatchCreation batchCreation, long memberId)throws Exception {
+
+		String sqlForUnique = "select count(*) from t_shelter_unit_livestock_batch where upper(BATCH_NAME) = upper('"+batchCreation.getBatchName()+"')";
+		
+		int count = jdbcTemplate.queryForObject(sqlForUnique,Integer.class);
+		if(count > 0){
+			return StandardVariables.UNIQUECONSTRAIN; 
+		}
+		
+		
+		StringBuilder sql = new StringBuilder(
+				"INSERT INTO t_shelter_unit_livestock_batch ");
+		sql.append("(BATCH_NAME,SUPPLIER_NAME, SHELTER_UNIT_ID, QUANTITY_RECEIVED, MATERIAL_ID, RECEIVING_DATE,CREATED_BY ,CREATED_ON ) ");
+		sql.append("VALUES (?,?,?,?,?,to_date(?, 'dd-mm-yyyy'),? ,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') )");
+
+		jdbcTemplate.update(
+				sql.toString(),
+				new Object[] {
+					
+					batchCreation.getBatchName(),
+					batchCreation.getSupplierName(),
+					Integer.parseInt(batchCreation.getShelterUnitName()),
+					batchCreation.getQuantityReceived(),
+					Integer.parseInt(batchCreation.getMaterialName()),
+					/*materialId,*/
+					batchCreation.getReceivingDate(),
+					memberId
+						
+		 });
+		return StandardVariables.SUCCESSFULL;
+				
+		} 
+
+	@Override
+	public void savePoultryMonitoringDetails(JqFormData jqFormData,
+			ShelterUnitMoniter shelterUnitMoniter, long shelterUnitBatchId,
+			long memberId) {
+
+		try {
+
+			Double AvgFeedPerDay;
+			Double LivestockAvgWt;
+			Double NumberOfMortality;
+			Double LivestockAvgTemp;
+			Double DistributionAvgWt;
+			Double NoOfDistributedChicks;
+			Double TotalExpenditure;
+
+			if (shelterUnitMoniter.getAvgFeedPerDay() == null)
+				AvgFeedPerDay = 0.0;
+			else
+				AvgFeedPerDay = shelterUnitMoniter.getAvgFeedPerDay();
+
+			if (shelterUnitMoniter.getLivestockAvgWt() == null)
+				LivestockAvgWt = 0.0;
+			else
+				LivestockAvgWt = shelterUnitMoniter.getLivestockAvgWt();
+
+			if (shelterUnitMoniter.getNumberOfMortality() == null)
+				NumberOfMortality = 0.0;
+			else
+				NumberOfMortality = shelterUnitMoniter.getNumberOfMortality();
+
+			if (shelterUnitMoniter.getLivestockAvgTemp() == null)
+				LivestockAvgTemp = 0.0;
+			else
+				LivestockAvgTemp = shelterUnitMoniter.getLivestockAvgTemp();
+
+			if (shelterUnitMoniter.getDistributionAvgWt() == null)
+				DistributionAvgWt = 0.0;
+			else
+				DistributionAvgWt = shelterUnitMoniter.getDistributionAvgWt();
+
+			if (shelterUnitMoniter.getNoOfDistributedChicks() == null)
+				NoOfDistributedChicks = 0.0;
+			else
+				NoOfDistributedChicks = shelterUnitMoniter
+						.getNoOfDistributedChicks();
+
+			if (shelterUnitMoniter.getTotalExpenditure() == null)
+				TotalExpenditure = 0.0;
+			else
+				TotalExpenditure = shelterUnitMoniter.getTotalExpenditure();
+
+			StringBuilder sql = new StringBuilder("INSERT INTO t_shelter_unit ");
+			sql.append("(SHELTER_UNIT_BATCH_ID, AVG_FEED_PER_DAY, LIVESTOCK_AVG_WT, NUMBER_OF_MORTALITY, LIVESTOCK_AVG_TEMP, ");
+			sql.append("DEWORMING_DATE,INSPECTION_DATE,VACCINATION_NAME,VACCINATION_DATE,DISEASE_NAME,TREATMENT_GIVEN ,"
+					+ "DISTRIBUTION_DATE,AVG_WT_DISTRIBUTION,NO_OF_CHICKS_DISTRIBUTED,TOTAL_EXPENDITURE,CREATED_BY,CREATED_ON) ");
+
+			sql.append(" VALUES (?,?,?,?,?,to_date(?, 'dd-mm-yyyy'),TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'),?,to_date(?, 'dd-mm-yyyy'),?,?,to_date(?, 'dd-mm-yyyy'),?,?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+
+			jdbcTemplate.update(
+					sql.toString(),
+					new Object[] { shelterUnitBatchId, AvgFeedPerDay,
+							LivestockAvgWt, NumberOfMortality,
+							LivestockAvgTemp,
+							shelterUnitMoniter.getDewormingDate(),
+							shelterUnitMoniter.getVaccinationName(),
+							shelterUnitMoniter.getVaccinationDate(),
+							shelterUnitMoniter.getDiseaseName(),
+							shelterUnitMoniter.getTreatmentGiven(),
+							shelterUnitMoniter.getDistributionDate(),
+							DistributionAvgWt, NoOfDistributedChicks,
+							TotalExpenditure, memberId });
+
+		}
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	public void updatePoultryMonitoringDetails(JqFormData jqFormData,
+			ShelterUnitMoniter shelterUnitMoniter, long shelterUnitBatchId, long memberId)
+			 {
+
+		try {
+			
+			Double AvgFeedPerDay;
+			Double LivestockAvgWt;
+			Double NumberOfMortality;
+			Double LivestockAvgTemp;
+			Double DistributionAvgWt;
+			Double NoOfDistributedChicks;
+			Double TotalExpenditure;
+			
+			if(shelterUnitMoniter.getAvgFeedPerDay()== null)
+				AvgFeedPerDay =0.0;
+			else
+				AvgFeedPerDay =shelterUnitMoniter.getAvgFeedPerDay();
+			
+			if(shelterUnitMoniter.getLivestockAvgWt()== null)
+				LivestockAvgWt =0.0;
+			else
+				LivestockAvgWt =shelterUnitMoniter.getLivestockAvgWt();
+			
+			if(shelterUnitMoniter.getNumberOfMortality()== null)
+				NumberOfMortality =0.0;
+			else
+				NumberOfMortality =shelterUnitMoniter.getNumberOfMortality();
+			
+			if(shelterUnitMoniter.getLivestockAvgTemp()== null)
+				LivestockAvgTemp =0.0;
+			else
+				LivestockAvgTemp =shelterUnitMoniter.getLivestockAvgTemp();
+			
+			if(shelterUnitMoniter.getDistributionAvgWt()== null)
+				DistributionAvgWt =0.0;
+			else
+				DistributionAvgWt =shelterUnitMoniter.getDistributionAvgWt();
+			
+			if(shelterUnitMoniter.getNoOfDistributedChicks()== null)
+				NoOfDistributedChicks =0.0;
+			else
+				NoOfDistributedChicks =shelterUnitMoniter.getNoOfDistributedChicks();
+			
+			if(shelterUnitMoniter.getTotalExpenditure()== null)
+				TotalExpenditure =0.0;
+			else
+				TotalExpenditure =shelterUnitMoniter.getTotalExpenditure();
+
+			StringBuilder sql = new StringBuilder("UPDATE t_shelter_unit set ");
+			sql.append("SHELTER_UNIT_BATCH_ID =?, AVG_FEED_PER_DAY =?, LIVESTOCK_AVG_WT =?, NUMBER_OF_MORTALITY=?, LIVESTOCK_AVG_TEMP=?, ");
+			sql.append("DEWORMING_DATE=to_date(?, 'dd-mm-yyyy'),INSPECTION_DATE=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'),VACCINATION_NAME=?,VACCINATION_DATE=to_date(?, 'dd-mm-yyyy'),DISEASE_NAME=?,TREATMENT_GIVEN=? ," +
+					"DISTRIBUTION_DATE=to_date(?, 'dd-mm-yyyy'),AVG_WT_DISTRIBUTION=?,NO_OF_CHICKS_DISTRIBUTED=?,TOTAL_EXPENDITURE=?,UPDATED_BY=?,UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where id=?");
+
+			jdbcTemplate.update(
+					sql.toString(),
+					new Object[] {shelterUnitBatchId ,AvgFeedPerDay,LivestockAvgWt,
+						NumberOfMortality,LivestockAvgTemp,shelterUnitMoniter.getDewormingDate(),
+						shelterUnitMoniter.getVaccinationName(),shelterUnitMoniter.getVaccinationDate(),
+						shelterUnitMoniter.getDiseaseName(),shelterUnitMoniter.getTreatmentGiven(),
+						shelterUnitMoniter.getDistributionDate(),DistributionAvgWt,NoOfDistributedChicks,
+						TotalExpenditure,memberId,shelterUnitMoniter.getMoniteringId()
+					});
+
+		} 
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	public List<BatchCreation> getGoultryBatchCreationDetails(JqFormData jqFormData,String lang,long cboId)
+			throws Exception {
+		try {
+			
+			int numberOfRecords = getGoultryBatchCreationCount(jqFormData, cboId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<BatchCreation> batchList = new ArrayList<BatchCreation>();
+			StringBuilder sql = new StringBuilder();
+			
+			if ("en".equalsIgnoreCase(lang)) {
+			 sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ " select a.SHELTER_UNIT_BATCH_ID ,a.BATCH_NAME, b.SHELTER_UNIT_NAME, a.QUANTITY_RECEIVED,c.MATERIAL_NAME,  ");
+			sql.append(" a.RECEIVING_DATE ,e.HEALTH_CERTIFICATE_PROVIDED from t_shelter_unit_livestock_batch a left join m_material c on a.material_id = c.material_id ");
+			sql.append(" left join t_qurantine e on a.SHELTER_UNIT_BATCH_ID = e.SHELTER_UNIT_BATCH_ID ");
+			sql.append(" left join m_shelter_unit  b on a.shelter_unit_id = b.shelter_unit_id ");
+			sql.append(" left join mp_cbo_partner f on b.PARTNER_ID = f.PARTNER_ID  ");
+			sql.append(" left join m_shelter_unit_type  d on b.shelter_unit_type_id =d.shelter_unit_type_id ");
+			sql.append(" where lower(d.description)  like lower('%Quarantine%') ");
+			sql.append(" and lower(c.MATERIAL_NAME) like lower('%Goat%') ");
+			sql.append(" and f.cbo_id = "+cboId);
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+			
+			
+			batchList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<BatchCreation>() {
+						@Override
+						public BatchCreation mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							BatchCreation batchCreation = new BatchCreation();
+							
+							batchCreation.setShelterUnitBatchId(resultSet.getLong("SHELTER_UNIT_BATCH_ID"));
+							batchCreation.setBatchName(resultSet.getString("BATCH_NAME"));
+							batchCreation.setQuantityReceived(resultSet.getDouble("QUANTITY_RECEIVED"));
+							batchCreation.setShelterUnitName(resultSet.getString("SHELTER_UNIT_NAME"));
+							batchCreation.setMaterialName(resultSet.getString("MATERIAL_NAME"));
+							batchCreation.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+							String healthCertificateProvided = "Yes";
+							if (resultSet.getInt("HEALTH_CERTIFICATE_PROVIDED") == 0)
+								healthCertificateProvided = "No";
+							batchCreation.setHealthCertificateProvided(healthCertificateProvided);
+							
+							return batchCreation;
+						}
+					});
+			}
+			else
+			{
+				sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+						+ " select a.SHELTER_UNIT_BATCH_ID ,a.BATCH_NAME, b.SHELTER_UNIT_NAME_HINDI, a.QUANTITY_RECEIVED,c.MATERIAL_NAME_HINDI,  ");
+				sql.append(" a.RECEIVING_DATE ,e.HEALTH_CERTIFICATE_PROVIDED from t_shelter_unit_livestock_batch a left join m_material c on a.material_id = c.material_id ");
+				sql.append(" left join t_qurantine e on a.SHELTER_UNIT_BATCH_ID = e.SHELTER_UNIT_BATCH_ID ");
+				sql.append(" left join m_shelter_unit  b on a.shelter_unit_id = b.shelter_unit_id ");
+				sql.append(" left join mp_cbo_partner f on b.PARTNER_ID = f.PARTNER_ID  ");
+				sql.append(" left join m_shelter_unit_type  d on b.shelter_unit_type_id =d.shelter_unit_type_id ");
+				sql.append(" where lower(d.description)  like lower('%Quarantine%') ");
+				sql.append(" and lower(c.MATERIAL_NAME) like lower('%Goat%') ");
+				sql.append(" and f.cbo_id = "+cboId);
+				
+				GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+				
+				
+				batchList = jdbcTemplate.query(sql.toString(),
+						new RowMapper<BatchCreation>() {
+							@Override
+							public BatchCreation mapRow(ResultSet resultSet,
+									int rownumber) throws SQLException {
+								BatchCreation batchCreation = new BatchCreation();
+								
+								batchCreation.setShelterUnitBatchId(resultSet.getLong("SHELTER_UNIT_BATCH_ID"));
+								batchCreation.setBatchName(resultSet.getString("BATCH_NAME"));
+								batchCreation.setQuantityReceived(resultSet.getDouble("QUANTITY_RECEIVED"));
+								batchCreation.setShelterUnitName(resultSet.getString("SHELTER_UNIT_NAME_HINDI"));
+								batchCreation.setMaterialName(resultSet.getString("MATERIAL_NAME_HINDI"));
+								batchCreation.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+
+								String healthCertificateProvided = "Yes";
+								if (resultSet.getInt("HEALTH_CERTIFICATE_PROVIDED") == 0)
+									healthCertificateProvided = "No";
+								batchCreation.setHealthCertificateProvided(healthCertificateProvided);
+								
+								return batchCreation;
+							}
+						});
+			}
+			
+			
+			return batchList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception();
+			
+		}
+	}
+	
+	@Override
+	public int getGoultryBatchCreationCount(JqFormData jqFormData, long cboId) {
+		final StringBuilder sql = new StringBuilder(
+				  "Select count(*) from "
+				+ "t_shelter_unit_livestock_batch a left join m_material c on a.material_id = c.material_id "
+				+ " left join t_qurantine e on a.SHELTER_UNIT_BATCH_ID = e.SHELTER_UNIT_BATCH_ID "
+				+ " left join m_shelter_unit  b on a.shelter_unit_id = b.shelter_unit_id "
+				+ " left join mp_cbo_partner f on b.PARTNER_ID = f.PARTNER_ID  "
+				+ " left join m_shelter_unit_type  d on b.shelter_unit_type_id =d.shelter_unit_type_id "
+				+ " where lower(d.description)  like lower('%Quarantine%') "
+				+ " and lower(c.MATERIAL_NAME) like lower('%Goat%') "
+				+ " and f.cbo_id = "+cboId);
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+	
+	@Override
+	public int saveGoultryBatchCreationDetails(final BatchCreation batchCreation,
+			final long memberId) throws RuntimeException{
+
+		/*String sqlMaterial = "select MATERIAL_ID from m_material where lower(material_name) like lower('%Goat%') ";
+		long materialId = jdbcTemplate.queryForObject(sqlMaterial, Long.class);*/
+		
+		String sqlForUnique = "select count(*) from t_shelter_unit_livestock_batch where upper(BATCH_NAME) = upper('"+batchCreation.getBatchName()+"')";
+		
+		int count = jdbcTemplate.queryForObject(sqlForUnique,Integer.class);
+		if(count > 0){
+			return StandardVariables.UNIQUECONSTRAIN; 
+		}
+		
+		final StringBuilder sql = new StringBuilder("INSERT INTO t_shelter_unit_livestock_batch ");
+		sql.append("(BATCH_NAME, SHELTER_UNIT_ID, QUANTITY_RECEIVED, MATERIAL_ID, RECEIVING_DATE ,CREATED_BY ,CREATED_ON) ");
+		sql.append("VALUES (?,?,?,?,to_date(?, 'dd-mm-yyyy'),?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') )");
+		
+		try {
+			KeyHolder keyHolder = new GeneratedKeyHolder();
+			jdbcTemplate.update(new PreparedStatementCreator() {
+				@Override
+				public PreparedStatement createPreparedStatement(
+						Connection connection) throws SQLException {
+					PreparedStatement ps = connection.prepareStatement(
+							sql.toString(), new String[] { "SHELTER_UNIT_BATCH_ID" });
+					ps.setString(1, batchCreation.getBatchName());
+					ps.setInt(2, Integer.parseInt(batchCreation.getShelterUnitName()));
+					ps.setDouble(3, batchCreation.getQuantityReceived());
+					ps.setInt(4, Integer.parseInt(batchCreation.getMaterialName()));
+					ps.setString(5, batchCreation.getReceivingDate());
+					ps.setLong(6, memberId);
+					return ps;
+				}
+			}, keyHolder);
+			long newShelterUnitBatchId = keyHolder.getKey().longValue();
+			
+			StringBuilder sql1 = new StringBuilder("INSERT INTO t_qurantine ");
+			sql1.append("(SHELTER_UNIT_BATCH_ID , HEALTH_CERTIFICATE_PROVIDED,CREATED_BY ,CREATED_ON  ) ");
+			sql1.append("VALUES (?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+			
+			
+		
+			jdbcTemplate.update(sql1.toString(),new Object[] {
+				newShelterUnitBatchId,
+							Integer.parseInt(batchCreation.getHealthCertificateProvided()),
+							memberId});
+			return StandardVariables.SUCCESSFULL;
+		} catch (Exception e) {
+			throw new RuntimeException();
+		}
+		
+	} 
+	
+	@Override
+	public int updatePoultryBatchCreationDetails(BatchCreation batchCreation, long memberId)throws Exception {
+		
+		String sqlForUnique = "select count(*) from t_shelter_unit_livestock_batch where upper(BATCH_NAME) = upper('"+batchCreation.getBatchName()+
+				"') and SHELTER_UNIT_BATCH_ID <> "+batchCreation.getShelterUnitBatchId();
+		
+		int count = jdbcTemplate.queryForObject(sqlForUnique,Integer.class);
+		if(count > 0){
+			return StandardVariables.UNIQUECONSTRAIN; 
+		}
+		
+		String dateReceiveStr;
+		java.util.Date receivingDate =null;
+		
+		if(batchCreation.getReceivingDate() != null){
+		    dateReceiveStr = batchCreation.getReceivingDate();
+		    DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+		    receivingDate = formatter.parse(dateReceiveStr);
+		}
+		
+		StringBuilder sql = new StringBuilder("update  t_shelter_unit_livestock_batch ");
+		sql.append(" set BATCH_NAME=? ,SUPPLIER_NAME= ?, RECEIVING_DATE=?, SHELTER_UNIT_ID =?, QUANTITY_RECEIVED =?, MATERIAL_ID=?  ,UPDATED_BY=?,");
+		sql.append(" UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where SHELTER_UNIT_BATCH_ID =? ");
+		
+		jdbcTemplate.update(
+				sql.toString(),
+				new Object[] { batchCreation.getBatchName(), batchCreation.getSupplierName(), receivingDate,Integer.parseInt(batchCreation.getShelterUnitName()),
+					batchCreation.getQuantityReceived(),Integer.parseInt(batchCreation.getMaterialName()),
+					 memberId  ,batchCreation.getShelterUnitBatchId() });
+		return StandardVariables.SUCCESSFULL;
+	}
+	
+	@Override
+	public int updateGoultryBatchCreationDetails(BatchCreation batchCreation, long memberId)throws RuntimeException {
+		try{
+			String sqlForUnique = "select count(*) from t_shelter_unit_livestock_batch where upper(BATCH_NAME) = upper('"+batchCreation.getBatchName()+
+					"') and SHELTER_UNIT_BATCH_ID <> "+batchCreation.getShelterUnitBatchId();
+			
+			int count = jdbcTemplate.queryForObject(sqlForUnique,Integer.class);
+			if(count > 0){
+				return StandardVariables.UNIQUECONSTRAIN; 
+			}
+				
+			String dateReceiveStr;
+			java.util.Date receivingDate =null;
+			
+			if(batchCreation.getReceivingDate() != null){
+			    dateReceiveStr = batchCreation.getReceivingDate();
+			    DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+			    receivingDate = formatter.parse(dateReceiveStr);
+			}
+			StringBuilder sql = new StringBuilder("update  t_shelter_unit_livestock_batch ");
+			sql.append(" set BATCH_NAME=? ,RECEIVING_DATE=?, SHELTER_UNIT_ID =?, QUANTITY_RECEIVED =?, MATERIAL_ID=?  ,UPDATED_BY=?, ");
+			sql.append(" UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where SHELTER_UNIT_BATCH_ID =? ");
+			
+				jdbcTemplate.update(sql.toString(),
+						new Object[] { batchCreation.getBatchName(),receivingDate,Integer.parseInt(batchCreation.getShelterUnitName()),
+						batchCreation.getQuantityReceived(),Integer.parseInt(batchCreation.getMaterialName()) ,
+						 memberId  ,batchCreation.getShelterUnitBatchId() });
+		
+		
+	
+			sql = new StringBuilder("update  t_qurantine ");
+			sql.append(" set HEALTH_CERTIFICATE_PROVIDED =? , UPDATED_BY=?,");
+			sql.append(" UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where SHELTER_UNIT_BATCH_ID =? ");
+			
+			jdbcTemplate.update(sql.toString(),
+					new Object[] { Integer.parseInt(batchCreation.getHealthCertificateProvided())
+					, memberId ,batchCreation.getShelterUnitBatchId() });
+			
+			return StandardVariables.SUCCESSFULL;
+		}catch (Exception e) {
+			throw new RuntimeException();
+		}
+	}
+	
+	//////2nd part//////////////
+	
+	public List<HouseholdBatch> getPoultryHouseholdBatchDetails(JqFormData jqFormData,String lang,long memberId)
+			throws Exception {
+		try {
+			int numberOfRecords = getPoultryHouseholdBatchCount(jqFormData, memberId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<HouseholdBatch> batchList = new ArrayList<HouseholdBatch>();
+			StringBuilder sql = new StringBuilder();
+			if ("en".equalsIgnoreCase(lang)) {
+			sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ "select a.HOUSEHOLD_BATCH_ID ,a.MEMBER_ID,tsu.batch_name ,a.RECEIVING_QUANTITY,a.mem_contri_receipt,c.MATERIAL_NAME  ,a.RECEIVING_DATE   ");
+			sql.append(" from t_household_batch a  join m_material c on a.material_id = c.material_id  ");
+			sql.append(" left join t_shelter_unit_livestock_batch tsu on a.batch_lot_number=tsu.shelter_unit_batch_id");
+			sql.append(" join m_cbo_member  b on a.member_id = b.member_id ");
+			sql.append(" and lower(c.MATERIAL_NAME) like lower('%Chick%')  ");
+			sql.append(" and a.member_id = "+memberId);
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			batchList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<HouseholdBatch>() {
+						@Override
+						public HouseholdBatch mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							HouseholdBatch householdBatch = new HouseholdBatch();
+							try
+							{
+							householdBatch.setHouseholdBatchId(resultSet.getLong("HOUSEHOLD_BATCH_ID"));
+
+							householdBatch.setMemberId(resultSet.getLong("MEMBER_ID"));
+							householdBatch.setReceivingQuantity(resultSet.getDouble("RECEIVING_QUANTITY"));
+							
+							householdBatch.setBatchNumber(resultSet.getString("batch_name"));
+							
+							householdBatch.setMembershipContributionReceipt(resultSet.getDouble("mem_contri_receipt"));
+							
+							householdBatch.setMaterialName(resultSet.getString("MATERIAL_NAME"));
+							
+							householdBatch.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+							}catch(Exception e)
+							{
+								e.printStackTrace();
+							}
+							return householdBatch;
+						}
+					});
+			}
+			else
+			{
+				sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+						+ "select a.HOUSEHOLD_BATCH_ID ,a.MEMBER_ID, tsu.batch_name, a.RECEIVING_QUANTITY, a.mem_contri_receipt, c.MATERIAL_NAME_HINDI, a.RECEIVING_DATE   ");
+				sql.append(" from t_household_batch a  join m_material c on a.material_id = c.material_id  ");
+				sql.append(" left join t_shelter_unit_livestock_batch tsu on a.batch_lot_number=tsu.shelter_unit_batch_id");
+				sql.append(" join m_cbo_member  b on a.member_id = b.member_id ");
+				sql.append(" and lower(c.MATERIAL_NAME) like lower('%Chick%')  ");
+				sql.append(" and a.member_id = "+memberId);
+				
+				GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+				batchList = jdbcTemplate.query(sql.toString(),
+						new RowMapper<HouseholdBatch>() {
+							@Override
+							public HouseholdBatch mapRow(ResultSet resultSet,
+									int rownumber) throws SQLException {
+								HouseholdBatch householdBatch = new HouseholdBatch();
+								householdBatch.setHouseholdBatchId(resultSet.getLong("HOUSEHOLD_BATCH_ID"));
+
+								householdBatch.setMemberId(resultSet.getLong("MEMBER_ID"));
+								householdBatch.setReceivingQuantity(resultSet.getDouble("RECEIVING_QUANTITY"));
+								householdBatch.setBatchNumber(resultSet.getString("batch_name"));
+								householdBatch.setMembershipContributionReceipt(resultSet.getDouble("mem_contri_receipt"));
+								
+								householdBatch.setMaterialName(resultSet.getString("MATERIAL_NAME_HINDI"));
+								
+								householdBatch.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+								return householdBatch;
+							}
+						});
+			}
+			
+			return batchList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception();
+		}
+	}
+	
+	@Override
+	public int getPoultryHouseholdBatchCount(JqFormData jqFormData, long memberId) {
+		final StringBuilder sql = new StringBuilder(
+				  "Select count(*) from "
+				+ "t_household_batch a  join m_material c on a.material_id = c.material_id  "
+				+ " join m_cbo_member  b on a.member_id = b.member_id "
+				+ " and lower(c.MATERIAL_NAME) like lower('%Chick%') "
+				+ " and a.member_id = "+memberId + " ");
+				
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+	
+	public List<PoultryMember> getHouseholdMonitoringList(JqFormData jqFormData,
+			long householdBatchId) throws Exception {
+		
+			
+			int numberOfRecords = getHouseholdMonitoringListCount(jqFormData, householdBatchId);
+			jqFormData.setTotalRecords(numberOfRecords);
+		
+			List<PoultryMember> poultryMemberDetailList = new ArrayList<PoultryMember>();
+			StringBuilder sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ "select b.VACCINATION_NAME,b.FEED_USED, b.FODDER_USED ,b.FRESH_WATER_AVAILABILITY, b.NIGHT_LIGHT_AVAILABILITY  ");
+			sql.append(" ,b.DEWORMING_DONE, b.DEBEAKING_DONE ,b.MORTALITY_NUMBER ,b.NIGHT_SHELTER_AVAILABILITY , ");
+			sql.append(" b.EGG_NESTING_AVAILABILITY,b.survillance_influenza_date, b.male_bird_number, b.female_bird_number, ");
+			sql.append(" b.inspection_date,b.disease_name,b.treatment_given ");
+			sql.append(" from t_poultry_member b left outer join t_household_batch a  ");
+			sql.append(" on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID  ");
+			sql.append(" where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+			//sql.append("  and b.created_on =(select max(created_on) from t_poultry_member where HOUSEHOLD_BATCH_ID = "+householdBatchId+")  ");
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			poultryMemberDetailList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<PoultryMember>() {
+						@Override
+						public PoultryMember mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							PoultryMember poultryMember = new PoultryMember();
+							poultryMember.setVaccinationName(resultSet.getString("VACCINATION_NAME"));
+							poultryMember.setMortalityNumber(resultSet.getDouble("MORTALITY_NUMBER"));
+							poultryMember.setMaleBirdNumber(resultSet.getDouble("MALE_BIRD_NUMBER"));
+							poultryMember.setFemaleBirdNumber(resultSet.getDouble("FEMALE_BIRD_NUMBER"));
+							
+							poultryMember.setSurvillanceInfluenzaDate(resultSet.getString("SURVILLANCE_INFLUENZA_DATE"));
+							poultryMember.setInspectionDate(resultSet.getString("INSPECTION_DATE"));
+							poultryMember.setDiseaseName(resultSet.getString("DISEASE_NAME"));
+							poultryMember.setTreatmentGiven(resultSet.getString("TREATMENT_GIVEN"));
+							poultryMember.setFeedUsed(resultSet.getString("FEED_USED"));
+							poultryMember.setFooterUsed(resultSet.getString("FODDER_USED"));
+
+							String freshWaterAvailability = "Yes";
+							if (resultSet.getInt("FRESH_WATER_AVAILABILITY") == 0)
+								freshWaterAvailability = "No";
+							poultryMember.setFreshWaterAvailability(freshWaterAvailability);
+							
+							String nightLightAvailability = "Yes";
+							if (resultSet.getInt("NIGHT_LIGHT_AVAILABILITY") == 0)
+								nightLightAvailability = "No";
+							poultryMember.setNightLightAvailability(nightLightAvailability);
+							
+							String dewormingDone = "Yes";
+							if (resultSet.getInt("DEWORMING_DONE") == 0)
+								dewormingDone = "No";
+							poultryMember.setDewormingDone(dewormingDone);
+							
+							String debeakingDone = "Yes";
+							if (resultSet.getInt("DEBEAKING_DONE") == 0)
+								debeakingDone = "No";
+							poultryMember.setDebeakingDone(debeakingDone);
+							
+							String nightShelterAvailability = "Yes";
+							if (resultSet.getInt("NIGHT_SHELTER_AVAILABILITY") == 0)
+								nightShelterAvailability = "No";
+							poultryMember.setNightShelterAvailability(nightShelterAvailability);
+							
+							String eggNestingAvailability = "Yes";
+							if (resultSet.getInt("EGG_NESTING_AVAILABILITY") == 0)
+								eggNestingAvailability = "No";
+							poultryMember.setEggNestingAvailability(eggNestingAvailability);
+							return poultryMember;
+						}
+					});
+			return poultryMemberDetailList;
+	}
+	
+	public int getHouseholdMonitoringListCount(JqFormData jqFormData,
+			long householdBatchId) {
+		final StringBuilder sql = new StringBuilder("select count(*) from "
+			+ "t_poultry_member b left outer join t_household_batch a "
+			+ " on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID "
+			+ " where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+					
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+
+	public List<PoultryProduction> getPoultryProductionList(JqFormData jqFormData,
+			long householdBatchId) throws Exception {
+		
+		try {
+			
+			int numberOfRecords = getPoultryProductionListCount(jqFormData, householdBatchId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<PoultryProduction> poultryProductionDetailList = new ArrayList<PoultryProduction>();
+			StringBuilder sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ "select b.NO_MALE_BIRD_SOLD, b.NO_FEMALE_BIRD_SOLD ,b.NO_MALE_BIRD_CONSUMED, b.NO_FEMALE_BIRD_CONSUMED  ");
+			sql.append(" ,b.AVG_EGG_PRODUCTION_WEEKLY, b.INCOME_BIRD_SOLD ,b.INCOME_EGG_SOLD ,b.NO_EGG_CONSUMED ,  ");
+			sql.append("  b.INSPECTION_DATE, b.WASTE_QUANTITY_COLLECTED,  b.WASTE_SALE_INCOME ");
+			sql.append(" from t_poultry_production b left outer join t_household_batch a ");
+			sql.append(" on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID   ");
+			sql.append(" where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+			//sql.append("  and b.created_on =(select max(created_on) from t_poultry_production where HOUSEHOLD_BATCH_ID = "+householdBatchId+")  ");
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			poultryProductionDetailList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<PoultryProduction>() {
+						@Override
+						public PoultryProduction mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							PoultryProduction poultryProduction = new PoultryProduction();
+							poultryProduction.setNumberOfMaleBirdSold(resultSet.getDouble("NO_MALE_BIRD_SOLD"));
+							poultryProduction.setNumberOfFemaleBirdSold(resultSet.getDouble("NO_FEMALE_BIRD_SOLD"));
+							poultryProduction.setNumberOfMaleBirdConsumed(resultSet.getDouble("NO_MALE_BIRD_CONSUMED"));
+							poultryProduction.setNumberOfFemaleBirdConsumed(resultSet.getDouble("NO_FEMALE_BIRD_CONSUMED"));
+							
+							poultryProduction.setAvgEggProductionWeekly(resultSet.getDouble("AVG_EGG_PRODUCTION_WEEKLY"));
+							poultryProduction.setIncomeBirdSold(resultSet.getLong("INCOME_BIRD_SOLD"));
+							poultryProduction.setIncomeEggSold(resultSet.getLong("INCOME_EGG_SOLD"));
+							poultryProduction.setNumberOfEggConsumed(resultSet.getDouble("NO_EGG_CONSUMED"));
+							poultryProduction.setInspectionDate(resultSet.getString("INSPECTION_DATE"));
+							
+							
+							poultryProduction.setWasteQuantityCollected(resultSet.getLong("WASTE_QUANTITY_COLLECTED"));
+							poultryProduction.setWasteSaleIncome(resultSet.getLong("WASTE_SALE_INCOME"));
+				
+
+							
+							
+							return poultryProduction;
+						}
+					});
+			return poultryProductionDetailList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e.toString());
+		}
+	}
+	
+	public int getPoultryProductionListCount(JqFormData jqFormData,
+			long householdBatchId) {
+		final StringBuilder sql = new StringBuilder("select count(*) from "
+			+ "t_poultry_production b left outer join t_household_batch a "
+			+ " on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID "
+			+ " where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+				
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+
+	@Override
+	public void savePoultryHouseholdBatchDetails(HouseholdBatch householdBatch,long member,long memberId) {
+
+		String sqlMaterial = "select MATERIAL_ID from m_material where lower(material_name) like lower('%Chick%') and record_status=1";
+		long materialId = jdbcTemplate.queryForObject(sqlMaterial, Long.class);
+		
+			StringBuilder sql = new StringBuilder(
+					"INSERT INTO t_household_batch ");
+			sql.append("(MEMBER_ID, BATCH_LOT_NUMBER,RECEIVING_QUANTITY,MEM_CONTRI_RECEIPT, RECEIVING_DATE, MATERIAL_ID, CREATED_BY ,CREATED_ON ) ");
+			sql.append("VALUES (?,?,?,?,to_date(?, 'dd-mm-yyyy'),? ,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') )");
+			try {
+				jdbcTemplate.update(sql.toString(),
+						new Object[] {member,householdBatch.getBatchNumber(),householdBatch.getReceivingQuantity(), householdBatch.getMembershipContributionReceipt(), householdBatch.getReceivingDate(),
+							materialId, memberId});
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+		} 
+	
+	@Override
+	public void savePoultryMemberDetails(JqFormData jqFormData,
+			PoultryMember poultryMember, long householdBatchId, long memberId)
+			 {
+
+		try {
+			Double mortalityNumber;
+			Double maleBirdNumber;
+			Double femaleBirdNumber;
+			
+			
+			
+			if(poultryMember.getMortalityNumber()== null)
+				mortalityNumber =0.0;
+			else
+				mortalityNumber =poultryMember.getMortalityNumber();
+			
+			if(poultryMember.getMaleBirdNumber()== null)
+				maleBirdNumber =0.0;
+			else
+				maleBirdNumber =poultryMember.getMaleBirdNumber();
+			
+			if(poultryMember.getFemaleBirdNumber()== null)
+				femaleBirdNumber =0.0;
+			else
+				femaleBirdNumber =poultryMember.getFemaleBirdNumber();
+			
+			StringBuilder sql = new StringBuilder("INSERT INTO t_poultry_member ");
+			sql.append("(HOUSEHOLD_BATCH_ID, FEED_USED, FODDER_USED, FRESH_WATER_AVAILABILITY, NIGHT_LIGHT_AVAILABILITY, ");
+			sql.append("DEWORMING_DONE, DEBEAKING_DONE, MORTALITY_NUMBER, NIGHT_SHELTER_AVAILABILITY, EGG_NESTING_AVAILABILITY, ");
+			sql.append("SURVILLANCE_INFLUENZA_DATE, MALE_BIRD_NUMBER, FEMALE_BIRD_NUMBER, INSPECTION_DATE, DISEASE_NAME,VACCINATION_NAME, ");
+			sql.append("TREATMENT_GIVEN,CREATED_BY  ,CREATED_ON) ");
+
+			sql.append(" VALUES (?,?,?,?,?,?,?,?,?,?,to_date(?, 'dd-mm-yyyy'),?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'),?,?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+
+			jdbcTemplate.update(
+					sql.toString(),
+					new Object[] {householdBatchId ,poultryMember.getFeedUsed(),poultryMember.getFooterUsed(),Integer.parseInt(poultryMember.getFreshWaterAvailability()),Integer.parseInt(poultryMember.getNightLightAvailability()),
+						Integer.parseInt(poultryMember.getDewormingDone()),Integer.parseInt(poultryMember.getDebeakingDone()),mortalityNumber,Integer.parseInt(poultryMember.getNightShelterAvailability()),Integer.parseInt(poultryMember.getEggNestingAvailability()),
+						poultryMember.getSurvillanceInfluenzaDate(),maleBirdNumber,femaleBirdNumber,poultryMember.getDiseaseName(),
+						poultryMember.getVaccinationName(),poultryMember.getTreatmentGiven(),memberId
+					});
+
+
+
+		} 
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	@Override
+	public void savePoultryProductionDetails(JqFormData jqFormData,
+			PoultryProduction poultryProduction, long householdBatchId, long memberId)
+			 {
+
+		try {
+			 Double numberOfMaleBirdSold;
+			 Double numberOfFemaleBirdSold;
+			 Double numberOfMaleBirdConsumed;
+			 Double numberOfFemaleBirdConsumed;
+			 Double numberOfEggConsumed;
+			 Double avgEggProductionWeekly;
+			
+			 Long incomeBirdSold;
+			 Long incomeEggSold;
+			 Long wasteQuantityCollected;
+			 Long wasteSaleIncome;
+			
+			if(poultryProduction.getNumberOfMaleBirdSold()== null)
+				numberOfMaleBirdSold =0.0;
+			else
+				numberOfMaleBirdSold =poultryProduction.getNumberOfMaleBirdSold();
+			
+			if(poultryProduction.getNumberOfFemaleBirdSold()== null)
+				numberOfFemaleBirdSold =0.0;
+			else
+				numberOfFemaleBirdSold =poultryProduction.getNumberOfFemaleBirdSold();
+			
+			if(poultryProduction.getNumberOfMaleBirdConsumed()== null)
+				numberOfMaleBirdConsumed =0.0;
+			else
+				numberOfMaleBirdConsumed =poultryProduction.getNumberOfMaleBirdConsumed();
+			
+			if(poultryProduction.getNumberOfFemaleBirdConsumed()== null)
+				numberOfFemaleBirdConsumed =0.0;
+			else
+				numberOfFemaleBirdConsumed =poultryProduction.getNumberOfFemaleBirdConsumed();
+			
+			if(poultryProduction.getNumberOfEggConsumed()== null)
+				numberOfEggConsumed =0.0;
+			else
+				numberOfEggConsumed =poultryProduction.getNumberOfEggConsumed();
+			
+			if(poultryProduction.getAvgEggProductionWeekly()== null)
+				avgEggProductionWeekly =0.0;
+			else
+				avgEggProductionWeekly =poultryProduction.getAvgEggProductionWeekly();
+			
+			if(poultryProduction.getIncomeBirdSold()== null)
+				incomeBirdSold =0L;
+			else
+				incomeBirdSold =poultryProduction.getIncomeBirdSold();
+			
+			if(poultryProduction.getIncomeEggSold()== null)
+				incomeEggSold =0L;
+			else
+				incomeEggSold =poultryProduction.getIncomeEggSold();
+			
+			if(poultryProduction.getWasteQuantityCollected()== null)
+				wasteQuantityCollected =0L;
+			else
+				wasteQuantityCollected =poultryProduction.getWasteQuantityCollected();
+			
+			if(poultryProduction.getWasteSaleIncome()== null)
+				wasteSaleIncome =0L;
+			else
+				wasteSaleIncome =poultryProduction.getWasteSaleIncome();
+
+			StringBuilder sql = new StringBuilder("INSERT INTO t_poultry_production ");
+			sql.append("(HOUSEHOLD_BATCH_ID, NO_MALE_BIRD_SOLD, NO_FEMALE_BIRD_SOLD, NO_MALE_BIRD_CONSUMED, NO_FEMALE_BIRD_CONSUMED, ");
+			sql.append("AVG_EGG_PRODUCTION_WEEKLY, INCOME_BIRD_SOLD, INCOME_EGG_SOLD, NO_EGG_CONSUMED, INSPECTION_DATE, ");
+			sql.append("WASTE_QUANTITY_COLLECTED, WASTE_SALE_INCOME,  ");
+			sql.append("CREATED_BY  ,CREATED_ON) ");
+
+			sql.append(" VALUES (?,?,?,?,?,?,?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'),?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+
+			jdbcTemplate.update(
+					sql.toString(),
+					new Object[] {householdBatchId ,numberOfMaleBirdSold,numberOfFemaleBirdSold,numberOfMaleBirdConsumed,numberOfFemaleBirdConsumed,
+						avgEggProductionWeekly,incomeBirdSold,incomeEggSold,numberOfEggConsumed,wasteQuantityCollected,wasteSaleIncome
+						,memberId});
+
+		} 
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	public List<HouseholdBatch> getGoateryHouseholdBatchDetails(JqFormData jqFormData,String lang,long memberId)
+			throws Exception {
+		try {
+			
+			int numberOfRecords = getGoateryHouseholdBatchCount(jqFormData, memberId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<HouseholdBatch> batchList = new ArrayList<HouseholdBatch>();
+			StringBuilder sql = new StringBuilder();
+			if ("en".equalsIgnoreCase(lang)) {
+			sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+					+ "select a.HOUSEHOLD_BATCH_ID ,a.MEMBER_ID, a.RECEIVING_QUANTITY,c.MATERIAL_NAME  ,a.RECEIVING_DATE   ");
+			sql.append(" from t_household_batch a  join m_material c on a.material_id = c.material_id  ");
+			sql.append(" join m_cbo_member  b on a.member_id = b.member_id ");
+			sql.append(" and lower(c.MATERIAL_NAME) like lower('%Goat%')  ");
+			sql.append(" and a.member_id = "+memberId);
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			batchList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<HouseholdBatch>() {
+						@Override
+						public HouseholdBatch mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							HouseholdBatch householdBatch = new HouseholdBatch();
+							householdBatch.setHouseholdBatchId(resultSet.getLong("HOUSEHOLD_BATCH_ID"));
+
+							householdBatch.setMemberId(resultSet.getLong("MEMBER_ID"));
+							householdBatch.setReceivingQuantity(resultSet.getDouble("RECEIVING_QUANTITY"));
+							
+							householdBatch.setMaterialName(resultSet.getString("MATERIAL_NAME"));
+							
+							householdBatch.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+							return householdBatch;
+						}
+					});
+			}
+			else
+			{
+				sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+						+ "select a.HOUSEHOLD_BATCH_ID ,a.MEMBER_ID, a.RECEIVING_QUANTITY,c.MATERIAL_NAME_HINDI  ,a.RECEIVING_DATE   ");
+				sql.append(" from t_household_batch a  join m_material c on a.material_id = c.material_id  ");
+				sql.append(" join m_cbo_member  b on a.member_id = b.member_id ");
+				sql.append(" and lower(c.MATERIAL_NAME) like lower('%Goat%')  ");
+				sql.append(" and a.member_id = "+memberId);
+				
+				GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+				batchList = jdbcTemplate.query(sql.toString(),
+						new RowMapper<HouseholdBatch>() {
+							@Override
+							public HouseholdBatch mapRow(ResultSet resultSet,
+									int rownumber) throws SQLException {
+								HouseholdBatch householdBatch = new HouseholdBatch();
+								householdBatch.setHouseholdBatchId(resultSet.getLong("HOUSEHOLD_BATCH_ID"));
+
+								householdBatch.setMemberId(resultSet.getLong("MEMBER_ID"));
+								householdBatch.setReceivingQuantity(resultSet.getDouble("RECEIVING_QUANTITY"));
+								
+								householdBatch.setMaterialName(resultSet.getString("MATERIAL_NAME_HINDI"));
+								
+								householdBatch.setReceivingDate(resultSet.getString("RECEIVING_DATE"));
+								return householdBatch;
+							}
+						});
+			}
+			
+			return batchList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception();
+		}
+	}
+	
+	@Override
+	public int getGoateryHouseholdBatchCount(JqFormData jqFormData, long memberId) {
+		final StringBuilder sql = new StringBuilder(
+				  "Select count(*) from "
+				+ "t_household_batch a  join m_material c on a.material_id = c.material_id  "
+				+ " join m_cbo_member  b on a.member_id = b.member_id "
+				+ " and lower(c.MATERIAL_NAME) like lower('%Goat%') "
+				+ " and a.member_id = "+memberId + " ");
+				
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+	
+	@Override
+	public void saveGoateryHouseholdBatchDetails(HouseholdBatch householdBatch,long member,long memberId) {
+
+		String sqlMaterial = "select MATERIAL_ID from m_material where lower(material_name) like lower('%Goat%') ";
+		long materialId = jdbcTemplate.queryForObject(sqlMaterial, Long.class);
+		
+			StringBuilder sql = new StringBuilder(
+					"INSERT INTO t_household_batch ");
+			sql.append("(MEMBER_ID, RECEIVING_QUANTITY, RECEIVING_DATE, MATERIAL_ID, CREATED_BY ,CREATED_ON ) ");
+			sql.append("VALUES (?,?,to_date(?, 'dd-mm-yyyy'),? ,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') )");
+			try {
+				jdbcTemplate.update(sql.toString(),
+						new Object[] {member,householdBatch.getReceivingQuantity(),householdBatch.getReceivingDate(),
+							materialId,memberId});
+				
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			
+		} 
+	
+	@Override
+	public void updatePoultryHouseholdBatchDetails(HouseholdBatch householdBatch, long memberId) {
+
+		try {
+			
+		String dateReceiveStr;
+		java.util.Date receivingDate =null;
+		
+		if(householdBatch.getReceivingDate() != null){
+		     dateReceiveStr = householdBatch.getReceivingDate();
+		    DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+		     receivingDate = formatter.parse(dateReceiveStr);
+		}
+		String sqlMaterial = "select MATERIAL_ID from m_material where lower(material_name) like lower('%Chick%') and record_status = 1";
+		long materialId = jdbcTemplate.queryForObject(sqlMaterial, Long.class);
+		
+			StringBuilder sql = new StringBuilder("update  t_household_batch ");
+			sql.append(" set  BATCH_LOT_NUMBER=?, RECEIVING_QUANTITY =?,MEM_CONTRI_RECEIPT = ?,  RECEIVING_DATE=? ,MATERIAL_ID=? ,UPDATED_BY=?,");
+			sql.append(" UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where HOUSEHOLD_BATCH_ID =? ");
+			
+				jdbcTemplate.update(
+						sql.toString(),
+						new Object[] { householdBatch.getBatchNumber(),householdBatch.getReceivingQuantity(),householdBatch.getMembershipContributionReceipt(),receivingDate ,materialId,memberId  ,householdBatch.getHouseholdBatchId()});
+			} catch (Exception e) {
+              e.printStackTrace();
+			}
+	}
+	
+	@Override
+	public void updateGoateryHouseholdBatchDetails(HouseholdBatch householdBatch, long memberId) {
+
+		try {
+			
+		String dateReceiveStr;
+		java.util.Date receivingDate =null;
+		
+		if(householdBatch.getReceivingDate() != null){
+		     dateReceiveStr = householdBatch.getReceivingDate();
+		    DateFormat formatter = new SimpleDateFormat("dd-MM-yyyy");
+		     receivingDate = formatter.parse(dateReceiveStr);
+		}
+		String sqlMaterial = "select MATERIAL_ID from m_material where lower(material_name) like lower('%Goat%') ";
+		long materialId = jdbcTemplate.queryForObject(sqlMaterial, Long.class);
+		
+			StringBuilder sql = new StringBuilder("update  t_household_batch ");
+			sql.append(" set  RECEIVING_QUANTITY =?, RECEIVING_DATE=? ,MATERIAL_ID=? ,UPDATED_BY=?,");
+			sql.append(" UPDATED_ON=TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS') where HOUSEHOLD_BATCH_ID =? ");
+			
+				jdbcTemplate.update(
+						sql.toString(),
+						new Object[] { householdBatch.getReceivingQuantity(), receivingDate ,materialId,memberId  ,householdBatch.getHouseholdBatchId()});
+			} catch (Exception e) {
+              e.printStackTrace();
+			}
+	}
+	
+	public List<GoateryMember> getHouseholdMonitoringGoateryList(JqFormData jqFormData,
+			long householdBatchId) throws Exception {
+		
+		try {
+
+			int numberOfRecords = getHouseholdMonitoringGoateryListCount(jqFormData, householdBatchId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<GoateryMember> goateryMemberDetailList = new ArrayList<GoateryMember>();
+			StringBuilder sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+				+ "select b.NIGHT_SHELTER_AVAILABILITY, b.FEED_USED ,b.FRESH_WATER_AVAILIBILITY, b.DEWORMING_DONE  ");
+			sql.append(",b.KIDS_COUNT_ON_DATE, b.KIDS_HEALTH ,b.NO_OF_MORTALITY ,b.MORTALITY_REASON , b.INSPECTION_DATE  ");
+			sql.append(" from t_goatery_member b left outer join t_household_batch a ");
+			sql.append(" on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID  ");
+			sql.append(" where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+			//sql.append("  and b.created_on =(select max(created_on) from t_goatery_member where HOUSEHOLD_BATCH_ID = "+householdBatchId+")  ");
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			goateryMemberDetailList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<GoateryMember>() {
+						@Override
+						public GoateryMember mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							GoateryMember goateryMember = new GoateryMember();
+							
+							String nightShelterAvailability = "Yes";
+							if (resultSet.getInt("NIGHT_SHELTER_AVAILABILITY") == 0)
+								nightShelterAvailability = "No";
+							goateryMember.setNightShelterAvailability(nightShelterAvailability);
+							
+							goateryMember.setFeedUsed(resultSet.getString("FEED_USED"));
+							
+							String freshWaterAvailability = "Yes";
+							if (resultSet.getInt("FRESH_WATER_AVAILIBILITY") == 0)
+								freshWaterAvailability = "No";
+							goateryMember.setFreshWaterAvailability(freshWaterAvailability);
+							
+							String dewormingDone = "Yes";
+							if (resultSet.getInt("DEWORMING_DONE") == 0)
+								dewormingDone = "No";
+							goateryMember.setDewormingDone(dewormingDone);
+							
+							//goateryMember.setDewormingDone(resultSet.getLong("DEWORMING_DONE"));
+							goateryMember.setKidsCountOnDate(resultSet.getLong("KIDS_COUNT_ON_DATE"));
+							goateryMember.setKidsHealth(resultSet.getString("KIDS_HEALTH"));
+							goateryMember.setMortalityNumber(resultSet.getLong("NO_OF_MORTALITY"));
+							
+							goateryMember.setMortalityReason(resultSet.getString("MORTALITY_REASON"));
+							goateryMember.setInspectionDate(resultSet.getString("INSPECTION_DATE"));
+							
+							return goateryMember;
+						}
+					});
+			return goateryMemberDetailList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e.toString());
+		}
+	}
+	
+	public int getHouseholdMonitoringGoateryListCount(JqFormData jqFormData,
+			long householdBatchId) {
+		final StringBuilder sql = new StringBuilder("select count(*) from "
+			+ "t_goatery_member b left outer join t_household_batch a "
+			+ " on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID "
+			+ " where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+						
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+
+	public List<GoateryProduction> getGoateryProductionList(JqFormData jqFormData,
+			long householdBatchId) throws Exception {
+		
+		try {
+			
+			int numberOfRecords = getGoateryProductionListCount(jqFormData, householdBatchId);
+			jqFormData.setTotalRecords(numberOfRecords);
+			
+			List<GoateryProduction> goateryProductionDetailList = new ArrayList<GoateryProduction>();
+			StringBuilder sql = new StringBuilder("select * from (select rownum rn,a.* from( "
+				+ "select b.NO_OF_GOATS_SOLD, b.MONERY_EARNED ,b.GOATS_MATED, b.GOATS_PREGNANT ");
+			sql.append(",b.GOATS_INFERTILE, b.NO_KIDS_BORN ,b.KIDS_WT_AVG ,b.INSPECTION_DATE ");
+			sql.append("from t_goatry_production b left outer join t_household_batch a ");
+			sql.append(" on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID   ");
+			sql.append(" where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+			//sql.append("  and b.created_on =(select max(created_on) from t_goatry_production where HOUSEHOLD_BATCH_ID = "+householdBatchId+")  ");
+			
+			GridUtils.buildQueryWithoutWhere(sql, jqFormData);
+
+			goateryProductionDetailList = jdbcTemplate.query(sql.toString(),
+					new RowMapper<GoateryProduction>() {
+						@Override
+						public GoateryProduction mapRow(ResultSet resultSet,
+								int rownumber) throws SQLException {
+							GoateryProduction goateryProduction = new GoateryProduction();
+							goateryProduction.setNumberOfGoatsSold(resultSet.getLong("NO_OF_GOATS_SOLD"));
+							goateryProduction.setMonery_earned(resultSet.getLong("MONERY_EARNED"));
+							goateryProduction.setGoatsMated(resultSet.getLong("GOATS_MATED"));
+							goateryProduction.setGoatsPregnant(resultSet.getLong("GOATS_PREGNANT"));
+							goateryProduction.setGoatsInfertitle(resultSet.getLong("GOATS_INFERTILE"));
+							goateryProduction.setNumberOfKidsBorn(resultSet.getLong("NO_KIDS_BORN"));
+							goateryProduction.setKidsWeightAverage(resultSet.getDouble("KIDS_WT_AVG"));
+							
+							goateryProduction.setInspectionDate(resultSet.getString("INSPECTION_DATE"));
+							
+							
+							return goateryProduction;
+						}
+					});
+			return goateryProductionDetailList;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception(e.toString());
+		}
+	}
+	
+	public int getGoateryProductionListCount(JqFormData jqFormData,
+			long householdBatchId) {
+		final StringBuilder sql = new StringBuilder("select count(*) from "
+			+ "t_goatry_production b left outer join t_household_batch a "
+			+ "on b.HOUSEHOLD_BATCH_ID = a.HOUSEHOLD_BATCH_ID "
+			+ "where b.HOUSEHOLD_BATCH_ID = "+householdBatchId+" ");
+					
+		GridUtils.buildSearchQueryWithoutWhere(sql, jqFormData);
+		return jdbcTemplate.queryForInt(sql.toString());
+	}
+
+	@Override
+	public void saveGoateryMemberDetails(JqFormData jqFormData,
+			GoateryMember goateryMember, long householdBatchId, long memberId)
+			 {
+
+		try {
+			Long kidsCountOnDate;
+			Long mortalityNumber;
+			
+			
+			if(goateryMember.getKidsCountOnDate()== null)
+				kidsCountOnDate =0L;
+			else
+				kidsCountOnDate =goateryMember.getKidsCountOnDate();
+			
+			
+			
+			if(goateryMember.getMortalityNumber()== null)
+				mortalityNumber =0L;
+			else
+				mortalityNumber =goateryMember.getMortalityNumber();
+			
+			
+			
+
+			StringBuilder sql = new StringBuilder("INSERT INTO t_goatery_member ");
+			sql.append("(HOUSEHOLD_BATCH_ID, NIGHT_SHELTER_AVAILABILITY, FEED_USED, FRESH_WATER_AVAILIBILITY, DEWORMING_DONE, ");
+			sql.append("KIDS_COUNT_ON_DATE, KIDS_HEALTH, NO_OF_MORTALITY, MORTALITY_REASON, INSPECTION_DATE,CREATED_BY  ,CREATED_ON) ");
+			
+
+			sql.append(" VALUES (?,?,?,?,?,?,?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'),?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+
+			jdbcTemplate.update(
+					sql.toString(),
+					new Object[] {householdBatchId ,Integer.parseInt(goateryMember.getNightShelterAvailability()),goateryMember.getFeedUsed(),
+						Integer.parseInt(goateryMember.getFreshWaterAvailability()),Integer.parseInt(goateryMember.getDewormingDone()),kidsCountOnDate,goateryMember.getKidsHealth(),
+						mortalityNumber,goateryMember.getMortalityReason() ,memberId
+					});
+
+		} 
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	@Override
+	public void saveGoateryProductionDetails(JqFormData jqFormData,
+			GoateryProduction goateryProduction, long householdBatchId, long memberId)
+			 {
+
+		try {
+			 Double kidsWeightAverage;
+			 
+			 Long numberOfGoatsSold;
+			 Long monery_earned;
+			 Long goatsMated;
+			 Long goatsPregnant;
+			 Long goatsInfertitle;
+			 Long numberOfKidsBorn;
+			
+			if(goateryProduction.getKidsWeightAverage()== null)
+				kidsWeightAverage =0.0;
+			else
+				kidsWeightAverage =goateryProduction.getKidsWeightAverage();
+			
+			
+			
+			if(goateryProduction.getNumberOfGoatsSold()== null)
+				numberOfGoatsSold =0L;
+			else
+				numberOfGoatsSold =goateryProduction.getNumberOfGoatsSold();
+			
+			if(goateryProduction.getMonery_earned()== null)
+				monery_earned =0L;
+			else
+				monery_earned =goateryProduction.getMonery_earned();
+			
+			if(goateryProduction.getGoatsMated()== null)
+				goatsMated =0L;
+			else
+				goatsMated =goateryProduction.getGoatsMated();
+			
+			if(goateryProduction.getGoatsPregnant()== null)
+				goatsPregnant =0L;
+			else
+				goatsPregnant =goateryProduction.getGoatsPregnant();
+			
+			if(goateryProduction.getGoatsInfertitle()== null)
+				goatsInfertitle =0L;
+			else
+				goatsInfertitle =goateryProduction.getGoatsInfertitle();
+			
+			if(goateryProduction.getNumberOfKidsBorn()== null)
+				numberOfKidsBorn =0L;
+			else
+				numberOfKidsBorn =goateryProduction.getNumberOfKidsBorn();
+			
+
+			StringBuilder sql = new StringBuilder("INSERT INTO t_goatry_production ");
+			sql.append("(HOUSEHOLD_BATCH_ID, NO_OF_GOATS_SOLD, MONERY_EARNED, GOATS_MATED, GOATS_PREGNANT, ");
+			sql.append("GOATS_INFERTILE, NO_KIDS_BORN, KIDS_WT_AVG,  INSPECTION_DATE, ");
+			sql.append("CREATED_BY  ,CREATED_ON) ");
+
+			sql.append(" VALUES (?,?,?,?,?,?,?,?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'),?,TO_CHAR(SYSDATE, 'DD-MON-YYYY HH:MI:SS'))");
+
+			jdbcTemplate.update(
+					sql.toString(),
+					new Object[] {householdBatchId ,numberOfGoatsSold,monery_earned,goatsMated,goatsPregnant,goatsInfertitle,
+						numberOfKidsBorn,kidsWeightAverage
+						,memberId});
+
+		} 
+
+		catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+	
+	public String getPoultryGoateryAccess(String lang,long cboId)
+			throws Exception {
+		String msg ="hi";
+		try {
+			StringBuilder sql1 = new StringBuilder(
+					"select count(*) from mp_cbo_activity mpa where mpa.cbo_id =  "+cboId);
+			sql1.append(" and mpa.record_status =1  and mpa.activity_id = (select ACTIVITY_ID from m_intervention_activity where  ");
+			sql1.append(" lower(ACTIVITY_SHORT_NAME) like  lower('%poul%') or lower(ACTIVITY_DESCRIPTION)  ");
+			sql1.append(" like  lower('%poul%') )  ");
+
+			StringBuilder sql2 = new StringBuilder(
+					"select count(*) from mp_cbo_activity mpa where mpa.cbo_id =  "+cboId);
+			sql2.append(" and mpa.record_status =1  and mpa.activity_id = (select ACTIVITY_ID from m_intervention_activity where  ");
+			sql2.append(" lower(ACTIVITY_SHORT_NAME) like  lower('%goat%') or lower(ACTIVITY_DESCRIPTION)  ");
+			sql2.append(" like  lower('%goat%') )  ");
+			
+			int polt = jdbcTemplate.queryForObject(sql1.toString(), Integer.class);
+			int goat = jdbcTemplate.queryForObject(sql2.toString(), Integer.class);
+			
+			if (polt == 1 &&  goat == 0) {
+				
+				msg = "pol";
+			}
+            if (goat == 1 && polt == 0) {
+				
+				msg = "goat";
+			}
+            if (goat == 1 && polt == 1) {
+				
+				msg = "both";
+			}
+			return msg;
+		} catch (Exception e) {
+			e.printStackTrace();
+			throw new Exception();
+		}
+	}
+
+	@Override
+	public List<BatchNumber> getPoultryBatchNumbers(long cboId) {
+		 String sql="select distinct shelter_unit_batch_id,batch_name from t_shelter_unit_livestock_batch order by shelter_unit_batch_id";
+		 return jdbcTemplate.query(sql, new RowMapper<BatchNumber>(){
+			@Override
+			public BatchNumber mapRow(ResultSet rs, int arg1) throws SQLException {
+				BatchNumber batchNumber = new BatchNumber();
+				batchNumber.setBatchId(rs.getLong("shelter_unit_batch_id"));
+				batchNumber.setBatchNumber(rs.getString("batch_name"));
+				return batchNumber;
+}
+			
+		});
+		 
+	}
+
+}
