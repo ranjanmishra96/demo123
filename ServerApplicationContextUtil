@@ -1,0 +1,32 @@
+
+
+package air.ccms.server.util;
+
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+@Component
+public class ServerApplicationContextUtil implements ApplicationContextAware {
+
+	private static ApplicationContext applicationContext = null;
+	
+	  public static ApplicationContext getApplicationContext() {
+          return applicationContext;
+      }
+	  
+      public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+          //Assign the ApplicationContext into a static variable
+    	  ServerApplicationContextUtil.applicationContext = applicationContext;
+      }
+      
+      public static Object getBean(Class<?> className){
+    	  return applicationContext.getBean(className);
+      }
+      
+      public static Object getBeanById(String beanId){
+    	  return applicationContext.getBean(beanId);
+      }
+
+}
