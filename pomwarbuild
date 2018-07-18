@@ -1,0 +1,94 @@
+	<!--  Start Sonar Exclusion -->
+	<properties>
+			<sonar.sources>src/main</sonar.sources>
+			<sonar.exclusions>src/main/webapp/webresources/common/scripts/lib/**</sonar.exclusions>
+	</properties>
+	<build>
+	<finalName>air-ccms-web</finalName>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>2.3</version>
+				<configuration>
+					<overlays>
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-masters</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-centralized-filing-web</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-stamp-reporting-web</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-utilities-web</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-listing-web</artifactId>
+						</overlay>
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-pa-web</artifactId>
+						</overlay>	
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-public-web</artifactId>
+						</overlay>	
+						<overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-pending-web</artifactId>
+						</overlay>
+						 <overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-kiosk-web</artifactId>
+						</overlay> 
+						<!--  <overlay>
+							<groupId>air.ccms</groupId>
+							<artifactId>air-ccms-search-web</artifactId>
+						</overlay>  -->
+											
+					</overlays>
+					
+				</configuration>
+			</plugin>
+			<!-- <plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>2.0</version>
+			</plugin>-->
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>tomcat-maven-plugin</artifactId>
+				<version>1.1</version>
+				<configuration>
+					<url>${tomcat-url}</url>
+					<server>${tomcat-server}</server>
+					<path>/air-ccms-web</path>
+				</configuration>
+			</plugin>
+			<!-- <plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>2.5.1</version>
+				<configuration>
+					<source>1.6</source>
+					<target>1.6</target>
+					<fork>true</fork>
+					<meminitial>1024m</meminitial>
+					<maxmem>2024m</maxmem>
+				</configuration>
+			</plugin>
+			Force Java 6
+			Surefire plugin before 2.9 version is buggy
+			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.12</version>
+			</plugin> -->
+		</plugins>
+	</build>
