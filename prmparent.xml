@@ -1,0 +1,770 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>air.ccms</groupId>
+	<artifactId>air-ccms-parent</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+
+	<name>air-ccms-parent</name>
+	<url>http://maven.apache.org</url>
+
+
+	<!-- Shared version number properties -->
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<org.apache.maven.plugins.version>3.1</org.apache.maven.plugins.version>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<maven.compiler.compilerVersion>1.7</maven.compiler.compilerVersion>
+		<maven.compiler.verbose>true</maven.compiler.verbose>
+		<maven.compiler.executable>false</maven.compiler.executable>
+		<maven.compiler.fork>false</maven.compiler.fork>
+
+		<!-- Application dependency versions -->
+		<org.springframework.version>3.1.1.RELEASE</org.springframework.version>
+		<org.hibernate.version>4.2.3.Final</org.hibernate.version>
+		<postgresql.version>9.1-901.jdbc4</postgresql.version>
+		<commons-dbcp.version>1.2.2</commons-dbcp.version>
+		<c3p0.version>0.9.1.2</c3p0.version>
+		<org.apache.tiles.version>2.2.2</org.apache.tiles.version>
+		<org.aspectj.version>1.6.9</org.aspectj.version>
+		<org.hibernate.validator.version>4.2.0.Final</org.hibernate.validator.version>
+
+		<org.slf4j.version>1.5.10</org.slf4j.version>
+		<org.apache.log4j.version>1.2.17</org.apache.log4j.version>
+
+
+		<junit.version>4.11</junit.version>
+		<org.dbunit.version>2.4.9</org.dbunit.version>
+		<com.h2database.version>1.3.172</com.h2database.version>
+		<com.hsqldb.version>2.0.0</com.hsqldb.version>
+		<org.easymock.version>3.1</org.easymock.version>
+		<org.apache.shiro.version>1.2.2</org.apache.shiro.version>
+
+		<!-- 3RD PARTY Utilities version -->
+		<com.air.airutilities.version>0.0.2-SNAPSHOT</com.air.airutilities.version>
+		<com.oracle.jdbc.ucp.version>11.2.0.3.0</com.oracle.jdbc.ucp.version>
+		<org.codehaus.jackson.version>1.9.12</org.codehaus.jackson.version>
+		<dozer.version>5.3.2</dozer.version>
+		<!-- AIR CCMS Artifact version -->
+		<air.ccms.version>0.0.1-SNAPSHOT</air.ccms.version>
+
+		<!-- CGLIB dependency -->
+		<cglib.version>2.2</cglib.version>
+
+		<!--Active MQ -->
+		<org.apache.activemq.version>5.6.0</org.apache.activemq.version>
+
+		<!-- Apache POI Version -->
+		<org.apache.poi.poi.version>3.9</org.apache.poi.poi.version>
+		<org.apache.poi.poi.poi-ooxml.version>3.9</org.apache.poi.poi.poi-ooxml.version>
+		
+		<!-- Jersey Version -->
+		<com.sun.jersey.version>1.8</com.sun.jersey.version>
+		
+		
+		<!-- Velocity Version -->
+		<org.apache.velocity.version>1.7</org.apache.velocity.version>
+		
+		<!-- Desktop Client Dependencies -->
+		<org.jfxflow.version>2</org.jfxflow.version>
+		<java.jfxrt>2.2</java.jfxrt>
+		<org.mnode.ical4j>1.0.2</org.mnode.ical4j>
+		<com.google.inject>3.0</com.google.inject>
+		 <javax.inject>1.0.0-PRD</javax.inject>
+		  <aopalliance>1.0</aopalliance>
+ 
+	</properties>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>${org.apache.maven.plugins.version}</version>
+				<configuration>
+					<fork>${maven.compiler.fork}</fork>
+					<executable>${maven.compiler.executable}</executable>
+					<verbose>${maven.compiler.verbose}</verbose>
+					<compilerVersion>${maven.compiler.compilerVersion}</compilerVersion>
+					<source>${maven.compiler.source}</source>
+					<target>${maven.compiler.target}</target>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<modules>
+		<module>air-ccms-common</module>
+		<module>air-ccms-web</module>
+		<module>air-ccms-centralized-filing-service</module>
+		<module>air-ccms-centralized-filing-web</module>
+		<module>air-ccms-web-deps</module>
+		<module>air-ccms-service</module>
+		<module>air-ccms-masters</module>
+		<module>air-ccms-stamp-reporting-web</module>
+	<!--	<module>air-ccms-stamp-reporting-service</module> -->
+		<module>air-ccms-web-common</module>
+		<!-- <module>air-ccms-desktop-client</module> --> 
+		<!-- <module>air-ccms-listing-service</module> -->
+		<!-- <module>air-ccms-listing-web</module> -->
+		<module>air-ccms-utilities-web</module>
+		<module>air-ccms-utilities-services</module>
+		<module>air-ccms-pa-service</module>
+		<module>air-ccms-pa-web</module>
+	  	<module>air-ccms-public-service</module>
+		<module>air-ccms-public-web</module> 		
+		<module>air-ccms-pending-service</module>
+		<module>air-ccms-pending-web</module>
+		<module>air-ccms-kiosk-web</module>
+        <!-- <module>air-ccms-search-web</module>-->
+  </modules>
+
+
+	<dependencyManagement>
+
+		<dependencies>
+			<!-- Core utilities used by other modules. Define this if you use Spring 
+				Utility APIs (org.springframework.core.*/org.springframework.util.*) -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-core</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Application Context (depends on spring-core, spring-expression, spring-aop, 
+				spring-beans) This is the central artifact for Spring's Dependency Injection 
+				Container and is generally always defined -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-context</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+				<exclusions>
+					<exclusion>
+						<groupId>commons-logging</groupId>
+						<artifactId>commons-logging</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+
+			<!-- Bean Factory and JavaBeans utilities (depends on spring-core) Define 
+				this if you use Spring Bean APIs (org.springframework.beans.*) -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-beans</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Web application development utilities applicable to both Servlet 
+				and Portlet Environments (depends on spring-core, spring-beans, spring-context) 
+				Define this if you use Spring MVC, or wish to use Struts, JSF, or another 
+				web framework with Spring (org.springframework.web.*) -->
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-web</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Spring MVC for Servlet Environments (depends on spring-core, spring-beans, 
+				spring-context, spring-web) Define this if you use Spring MVC with a Servlet 
+				Container such as Apache Tomcat (org.springframework.web.servlet.*) -->
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-webmvc</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Aspect Oriented Programming (AOP) Framework (depends on spring-core, 
+				spring-beans) Define this if you use Spring AOP APIs (org.springframework.aop.*) -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-aop</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Various Application Context utilities, including EhCache, JavaMail, 
+				Quartz, and Freemarker integration Define this if you need any of these integrations -->
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-context-support</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-aspects</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-jms</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.aspectj</groupId>
+				<artifactId>aspectjrt</artifactId>
+				<version>${org.aspectj.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.aspectj</groupId>
+				<artifactId>aspectjweaver</artifactId>
+				<version>1.6.8</version>
+			</dependency>
+			<!-- Object-to-Relation-Mapping (ORM) integration with Hibernate, JPA 
+				and iBatis. (depends on spring-core, spring-beans, spring-context, spring-tx) 
+				Define this if you need ORM (org.springframework.orm.*) -->
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-orm</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Transaction Management Abstraction (depends on spring-core, spring-beans, 
+				spring-aop, spring-context) Define this if you use Spring Transactions or 
+				DAO Exception Hierarchy (org.springframework.transaction.*/org.springframework.dao.*) -->
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-tx</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Jackson JSON Mapper -->
+			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-mapper-asl</artifactId>
+				<version>${org.codehaus.jackson.version}</version>
+			</dependency>
+
+
+			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-core-asl</artifactId>
+				<version>${org.codehaus.jackson.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-jaxrs</artifactId>
+				<version>${org.codehaus.jackson.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.codehaus.jackson</groupId>
+				<artifactId>jackson-xc</artifactId>
+				<version>${org.codehaus.jackson.version}</version>
+			</dependency>
+
+			<!-- Dozer Mapper Dependency -->
+			<dependency>
+				<groupId>net.sf.dozer</groupId>
+				<artifactId>dozer</artifactId>
+				<version>${dozer.version}</version>
+			</dependency>
+
+
+			<!-- Hibernate Dependencies -->
+
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-core</artifactId>
+				<version>${org.hibernate.version}</version>
+				<!-- <exclusions> <exclusion> <artifactId>jboss-logging</artifactId> 
+					<groupId>org.jboss.logging</groupId> </exclusion> <exclusion> <artifactId> 
+					jboss-transaction-api_1.1_spec </artifactId> <groupId>org.jboss.spec.javax.transaction</groupId> 
+					</exclusion> </exclusions> -->
+			</dependency>
+
+			<!-- TO CHECK -->
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-ehcache</artifactId>
+				<version>${org.hibernate.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>javax.transaction</groupId>
+				<artifactId>jta</artifactId>
+				<version>1.1</version>
+			</dependency>
+
+			<!-- Hibernate Envers -->
+
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-envers</artifactId>
+				<version>${org.hibernate.version}</version>
+			</dependency>
+
+			<!-- Hibernate Validator -->
+			<dependency>
+				<groupId>org.hibernate</groupId>
+				<artifactId>hibernate-validator</artifactId>
+				<version>${org.hibernate.validator.version}</version>
+			</dependency>
+
+
+			<!-- Tiles Core Library, including basic implementation of the APIs. -->
+
+			<dependency>
+				<groupId>org.apache.tiles</groupId>
+				<artifactId>tiles-core</artifactId>
+				<version>${org.apache.tiles.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.tiles</groupId>
+				<artifactId>tiles-jsp</artifactId>
+				<version>${org.apache.tiles.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.tiles</groupId>
+				<artifactId>tiles-api</artifactId>
+				<version>${org.apache.tiles.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.tiles</groupId>
+				<artifactId>tiles-template</artifactId>
+				<version>${org.apache.tiles.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+			<!-- Logging -->
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>${org.slf4j.version}</version>
+				<scope>compile</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>jcl-over-slf4j</artifactId>
+				<version>${org.slf4j.version}</version>
+				<scope>compile</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-log4j12</artifactId>
+				<version>${org.slf4j.version}</version>
+				<scope>compile</scope>
+			</dependency>
+			<dependency>
+				<groupId>log4j</groupId>
+				<artifactId>log4j</artifactId>
+				<version>${org.apache.log4j.version}</version>
+				<scope>compile</scope>
+			</dependency>
+
+
+			<!-- Test dependencies -->
+			<dependency>
+				<groupId>junit</groupId>
+				<artifactId>junit</artifactId>
+				<version>${junit.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.dbunit</groupId>
+				<artifactId>dbunit</artifactId>
+				<version>${org.dbunit.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.h2database</groupId>
+				<artifactId>h2</artifactId>
+				<version>${com.h2database.version}</version>
+				<scope>test</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.hsqldb</groupId>
+				<artifactId>hsqldb</artifactId>
+				<version>${com.hsqldb.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-spring</artifactId>
+				<version>${org.apache.shiro.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-core</artifactId>
+				<version>${org.apache.shiro.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-web</artifactId>
+				<version>${org.apache.shiro.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.shiro</groupId>
+				<artifactId>shiro-ehcache</artifactId>
+				<version>${org.apache.shiro.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.easymock</groupId>
+				<artifactId>easymock</artifactId>
+				<version>${org.easymock.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<dependency>
+				<groupId>org.springframework</groupId>
+				<artifactId>spring-test</artifactId>
+				<version>${org.springframework.version}</version>
+				<scope>test</scope>
+			</dependency>
+
+			<!-- Postgress Database Drivers and Pooling Libraries -->
+			<dependency>
+				<groupId>postgresql</groupId>
+				<artifactId>postgresql</artifactId>
+				<version>${postgresql.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>commons-dbcp</groupId>
+				<artifactId>commons-dbcp</artifactId>
+				<version>${commons-dbcp.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>org.hsqldb</groupId>
+				<artifactId>hsqldb</artifactId>
+				<version>${hsqldb.version}</version>
+			</dependency>
+
+
+			<!--Connection Pooling C3P0 -->
+			<dependency>
+				<groupId>c3p0</groupId>
+				<artifactId>c3p0</artifactId>
+				<version>${c3p0.version}</version>
+			</dependency>
+
+			<!-- AOP dependency -->
+			<dependency>
+				<groupId>cglib</groupId>
+				<artifactId>cglib</artifactId>
+				<version>${cglib.version}</version>
+			</dependency>
+
+
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-web-deps</artifactId>
+				<version>0.0.1-SNAPSHOT</version>
+				<type>pom</type>
+			</dependency>
+			<dependency>
+				<groupId>com.air</groupId>
+				<artifactId>airutilities</artifactId>
+				<version>${com.air.airutilities.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.oracle</groupId>
+				<artifactId>jdbc</artifactId>
+				<version>${com.oracle.jdbc.ucp.version}</version>
+				<classifier>ucp</classifier>
+			</dependency>
+
+
+			<!-- TODO Verify whether we need this here -->
+
+			<!-- CCMS Common module -->
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-common</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			<!-- CCMS Common centralized filing service -->
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-centralized-filing-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-web-common</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+	  	<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-stamp-reporting-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-utilities-services</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-listing-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-pa-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			
+			<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-public-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+			
+				<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-pending-service</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency>
+
+
+			<!--<dependency>
+				<groupId>air.ccms</groupId>
+				<artifactId>air-ccms-desktop-client</artifactId>
+				<version>${air.ccms.version}</version>
+			</dependency> -->
+			<!-- Apache POI -->
+			
+ 
+			<dependency>
+				<groupId>org.apache.poi</groupId>
+				<artifactId>poi</artifactId>
+				<version>${org.apache.poi.poi.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.poi</groupId>
+				<artifactId>poi-ooxml</artifactId>
+				<version>${org.apache.poi.poi.poi-ooxml.version}</version>
+			</dependency>
+
+			<!-- Activiti from Commons Pom -->
+			<dependency>
+				<groupId>org.apache.activemq</groupId>
+				<artifactId>activemq-core</artifactId>
+				<version>${org.apache.activemq.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.springframework</groupId>
+						<artifactId>spring-context</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.slf4j</groupId>
+						<artifactId>slf4j-api</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.apache.activemq</groupId>
+						<artifactId>activeio-core</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.apache.activemq</groupId>
+						<artifactId>kahadb</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.jasypt</groupId>
+						<artifactId>jasypt</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.apache.activemq.protobuf</groupId>
+						<artifactId>activemq-protobuf</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>commons-net</groupId>
+						<artifactId>commons-net</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.osgi</groupId>
+						<artifactId>org.osgi.core</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.fusesource.mqtt-client</groupId>
+						<artifactId>mqtt-client</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.fusesource.fuse-extra</groupId>
+						<artifactId>fusemq-leveldb</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+
+			<!-- Jersey Dependencies Pom -->
+			<dependency>
+				<groupId>com.sun.jersey</groupId>
+				<artifactId>jersey-server</artifactId>
+				<version>${com.sun.jersey.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.sun.jersey</groupId>
+				<artifactId>jersey-client</artifactId>
+				<version>${com.sun.jersey.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.sun.jersey</groupId>
+				<artifactId>jersey-json</artifactId>
+				<version>${com.sun.jersey.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.codehaus.jackson</groupId>
+						<artifactId>jackson-mapper-asl</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.codehaus.jackson</groupId>
+						<artifactId>jackson-core-asl</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.codehaus.jackson</groupId>
+						<artifactId>jackson-jaxrs</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.codehaus.jackson</groupId>
+						<artifactId>jackson-xc</artifactId>
+					</exclusion>
+				</exclusions>
+			</dependency>
+			<dependency>
+				<groupId>com.sun.jersey.contribs</groupId>
+				<artifactId>jersey-spring</artifactId>
+				<version>${com.sun.jersey.version}</version>
+				<exclusions>
+					<exclusion>
+						<groupId>org.springframework</groupId>
+						<artifactId>spring-core</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.springframework</groupId>
+						<artifactId>spring-beans</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.springframework</groupId>
+						<artifactId>spring-context</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.springframework</groupId>
+						<artifactId>spring-web</artifactId>
+					</exclusion>
+					<exclusion>
+						<groupId>org.springframework</groupId>
+						<artifactId>spring-aop</artifactId>
+					</exclusion>
+				</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.jersey.contribs</groupId>
+			<artifactId>jersey-apache-client</artifactId>
+			<version>${com.sun.jersey.version}</version>
+		</dependency>
+		
+			
+			<!-- spring security Dependencies Pom -->
+			<dependency>
+				<groupId>org.springframework.security.oauth</groupId>
+				<artifactId>spring-security-oauth2</artifactId>
+				<version>1.0.0.RELEASE</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.security</groupId>
+				<artifactId>spring-security-config</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.security</groupId>
+				<artifactId>spring-security-web</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.security</groupId>
+				<artifactId>spring-security-core</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.security</groupId>
+				<artifactId>spring-security-aspects</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.springframework.security</groupId>
+				<artifactId>spring-security-taglibs</artifactId>
+				<version>${org.springframework.version}</version>
+			</dependency>
+			
+			<!-- Velocity Template -->
+			<dependency>
+			<groupId>org.apache.velocity</groupId>
+			<artifactId>velocity</artifactId>
+			<version>${org.apache.velocity.version}</version>
+		</dependency>
+		
+		<!-- Desktop Client Dependencies -->
+		
+		
+		
+		<dependency>
+			<groupId>org.jfxflow</groupId>
+			<artifactId>jfxflow</artifactId>
+			<version>${org.jfxflow.version}</version>
+		</dependency>
+		
+		<!-- <dependency> 
+			<groupId>javafx</groupId>
+			<artifactId>javafx</artifactId> 
+			<version>${java.jfxrt}</version>
+			<scope>system</scope>
+			<systemPath>${env.JAVA_HOME}/jre/lib/jfxrt.jar</systemPath> 
+		</dependency> -->
+		
+		<dependency>
+			<groupId>com.google.inject</groupId>
+			<artifactId>guice</artifactId>
+			<version>${com.google.inject}</version>
+		</dependency>
+		
+		<dependency>
+      <groupId>javax.inject</groupId>
+      <artifactId>inject-api</artifactId>
+      <version>${javax.inject}</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>aopalliance</groupId>
+      <artifactId>aopalliance</artifactId>
+      <version>${aopalliance}</version>
+    </dependency>
+			
+		</dependencies>
+	</dependencyManagement>
+</project>
